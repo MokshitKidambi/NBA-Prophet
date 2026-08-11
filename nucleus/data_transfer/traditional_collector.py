@@ -1,6 +1,10 @@
 from nba_api.stats.endpoints import leaguedashteamstats 
 from nba_api.stats.endpoints import leaguedashplayerstats 
 from pathlib import Path
+import json
+
+with open("starters\\stats.json", "r") as f:
+    traditional = json.load(f)
 
 class TraditionalStats:
     def __init__(self):
@@ -13,7 +17,7 @@ class TraditionalStats:
     def get_team_stats(self, seasons):
         teams = leaguedashteamstats.LeagueDashTeamStats(
         season = self.get_season(seasons),
-        season_type_all_star = "Regular Season"
+        season_type_all_star = traditional["traditional"]["season_type_all_star"]
         )
 
         team_data_frames = teams.get_data_frames()[0]
@@ -22,8 +26,8 @@ class TraditionalStats:
 
     def get_player_stats(self, seasons):
          players = leaguedashplayerstats.LeagueDashPlayerStats(season = self.get_season(seasons), 
-                        season_type_all_star = "Regular Season"
-                )
+                season_type_all_star = traditional["traditional"]["season_type_all_star"]
+            )
         
          player_data_frames = players.get_data_frames()[0]
 
@@ -45,6 +49,6 @@ class TraditionalStats:
         return "Done"
 
 seasoner = TraditionalStats()
-for i in range(2023, 2026):
+for i in range(2020, 2026):
     shortyear = (i + 1) % 100
     data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")

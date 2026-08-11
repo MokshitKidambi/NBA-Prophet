@@ -1,0 +1,9 @@
+{
+    "traditional": {
+        "season_type_all_star": "Regular Season"
+    },
+    "advanced": {
+        "season_type_all_star": "Regular Season",
+        "measure_type_detailed_defense": "Advanced"
+    }
+}

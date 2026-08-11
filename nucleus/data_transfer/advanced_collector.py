@@ -1,6 +1,10 @@
 from nba_api.stats.endpoints import leaguedashteamstats 
 from nba_api.stats.endpoints import leaguedashplayerstats 
 from pathlib import Path
+import json
+
+with open("starters\\stats.json", "r") as f:
+    advanced = json.load(f)
 
 class AdvancedStats:
     def __init__(self):
@@ -11,10 +15,11 @@ class AdvancedStats:
        return self.season
 
     def get_team_stats(self, seasons):
+        
         teams = leaguedashteamstats.LeagueDashTeamStats(
         season = self.get_season(seasons),
-        season_type_all_star = "Regular Season",
-        measure_type_detailed_defense = "Advanced"
+        season_type_all_star = advanced["advanced"]["season_type_all_star"],
+        measure_type_detailed_defense = advanced["advanced"]["measure_type_detailed_defense"]
         )
 
         team_data_frames = teams.get_data_frames()[0]
@@ -23,8 +28,8 @@ class AdvancedStats:
 
     def get_player_stats(self, seasons):
          players = leaguedashplayerstats.LeagueDashPlayerStats(season = self.get_season(seasons), 
-                        season_type_all_star = "Regular Season",
-                        measure_type_detailed_defense = "Advanced"
+                        season_type_all_star = advanced["advanced"]["season_type_all_star"],
+                        measure_type_detailed_defense = advanced["advanced"]["measure_type_detailed_defense"]
                 )
         
          player_data_frames = players.get_data_frames()[0]
@@ -47,6 +52,6 @@ class AdvancedStats:
         return "Done"
 
 seasoner = AdvancedStats()
-for i in range(1996, 2026):
+for i in range(2019, 2026):
     shortyear = (i + 1) % 100
     data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
