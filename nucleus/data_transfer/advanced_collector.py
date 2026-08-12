@@ -1,6 +1,7 @@
 from nba_api.stats.endpoints import leaguedashteamstats 
 from nba_api.stats.endpoints import leaguedashplayerstats 
 from pathlib import Path
+from requests.exceptions import ReadTimeout
 import json
 
 with open("starters\\stats.json", "r") as f:
@@ -52,6 +53,29 @@ class AdvancedStats:
         return "Done"
 
 seasoner = AdvancedStats()
-for i in range(2019, 2026):
-    shortyear = (i + 1) % 100
-    data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
+
+try:
+    for i in range(1996, 2026):
+        shortyear = (i + 1) % 100
+        data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
+except ReadTimeout:
+    for i in range(1996, 2006):
+        shortyear = (i + 1) % 100
+        data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
+    for i in range(2006, 2016):
+        shortyear = (i + 1) % 100
+        data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
+    for i in range(2016, 2026):
+        shortyear = (i + 1) % 100
+        data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
+except ReadTimeout:
+    i = 1996
+    for k in range (1996, 2026):
+        for i in range(i, k + 1):
+            if i == 2026:
+                i = 1996
+                break
+            shortyear = (i + 1) % 100
+            data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
+            i += 1
+    
