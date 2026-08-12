@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas
+from datetime import date
 
 class DataChecker:
     def __init__(self):
@@ -15,6 +16,7 @@ class DataChecker:
         self.fl_checker = True
         self.col_checker = True
         self.san_checker = True
+
         self.summary = True
 
 
@@ -24,7 +26,7 @@ class DataChecker:
         k = 0
 
         for file in self.trad_team_path.iterdir():
-            if i == 2026:
+            if i == date.today().year():
                 i = 1996
                 j = (i + 1) % 100
                 k = 0
@@ -41,7 +43,7 @@ class DataChecker:
         print(f"Team traditional files are good. Count: {k}")
 
         for file in self.trad_player_path.iterdir():
-                    if i == 2026:
+                    if i == date.today().year():
                          i = 1996
                          j = (i + 1) % 100
                          k = 0
@@ -63,7 +65,7 @@ class DataChecker:
             l = 0
     
             for file in self.adv_team_path.iterdir():
-                if i == 2026:
+                if i == date.today().year():
                     i = 1996
                     j = (i + 1) % 100
                     l = 0
@@ -83,7 +85,7 @@ class DataChecker:
                 print("Team Advanced files are not good")
 
             for file in self.adv_player_path.iterdir():
-                        if i == 2026:
+                        if i == date.today().year():
                              i = 1996
                              j = (i + 1) % 100
                              l = 0
@@ -297,6 +299,4 @@ class DataChecker:
          self.summary_runner()
          self.back_runner()
                 
-checker = DataChecker()
-checker.runner()
 

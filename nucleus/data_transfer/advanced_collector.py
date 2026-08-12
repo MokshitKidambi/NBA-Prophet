@@ -2,6 +2,7 @@ from nba_api.stats.endpoints import leaguedashteamstats
 from nba_api.stats.endpoints import leaguedashplayerstats 
 from pathlib import Path
 from requests.exceptions import ReadTimeout
+from datetime import date
 import json
 
 with open("starters\\stats.json", "r") as f:
@@ -10,6 +11,7 @@ with open("starters\\stats.json", "r") as f:
 class AdvancedStats:
     def __init__(self):
         self.season = ""
+        self.timeout_seasons = []
 
     def get_season(self, seasons):
        self.season = seasons
@@ -52,39 +54,43 @@ class AdvancedStats:
 
         return "Done"
 
-seasoner = AdvancedStats()
-timeout_seasons = []
+    def run(self):
 
-failed_number1 = 0
-failed_number2 = 0
+        failed_number1 = 0
+        failed_number2 = 0
 
-try:
-    for i in range(1996, 2026):
-        shortyear = (i + 1) % 100
-        data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
-except ReadTimeout:
-    for i in range(1996, 2006):
-        shortyear = (i + 1) % 100
-        data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
-    for i in range(2006, 2016):
-        shortyear = (i + 1) % 100
-        data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
-    for i in range(2016, 2026):
-        shortyear = (i + 1) % 100
-        data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
-except ReadTimeout:
-    i = 1996
-    for k in range (1996, 2026):
-        for i in range(i, k + 1):
-            if i == 2026:
-                i = 1996
-                break
-            shortyear = (i + 1) % 100
-            data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
-            if ReadTimeout:
-                failed_number1 = i
-                failed_number2 = shortyear
-                timeout_seasons.append(f"{failed_number1}-{failed_number2}")
-                i += 1
-                continue
-            i += 1
+        try:
+            for i in range(1996, date.today().year()):
+                shortyear = (i + 1) % 100
+                self.transfer_stats(f"{i}-{shortyear:02d}")
+        except ReadTimeout:
+            for i in range(1996, 2006):
+                shortyear = (i + 1) % 100
+                self.transfer_stats(f"{i}-{shortyear:02d}")
+            for i in range(2006, 2016):
+                shortyear = (i + 1) % 100
+                self.transfer_stats(f"{i}-{shortyear:02d}")
+            for i in range(2016, date.today().year()):
+                shortyear = (i + 1) % 100
+                self.transfer_stats(f"{i}-{shortyear:02d}")
+        except ReadTimeout:
+            i = 1996
+            for k in range (1996, date.today().year()):
+                for i in range(i, k + 1):
+                    if i == date.today().year():
+                        i = 1996
+                        break
+                    shortyear = (i + 1) % 100
+                    self.transfer_stats(f"{i}-{shortyear:02d}")
+                    if ReadTimeout:
+                        failed_number1 = i
+                        failed_number2 = shortyear
+                        self.timeout_seasons.append(f"{failed_number1}-{failed_number2}")
+                        i += 1
+                        continue
+                    i += 1
+        print(self.timeout_seasons)
+        self.timeout_seasons = []
+
+
+
