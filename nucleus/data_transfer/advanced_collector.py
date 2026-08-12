@@ -53,6 +53,10 @@ class AdvancedStats:
         return "Done"
 
 seasoner = AdvancedStats()
+timeout_seasons = []
+
+failed_number1 = 0
+failed_number2 = 0
 
 try:
     for i in range(1996, 2026):
@@ -77,5 +81,10 @@ except ReadTimeout:
                 break
             shortyear = (i + 1) % 100
             data = seasoner.transfer_stats(f"{i}-{shortyear:02d}")
+            if ReadTimeout:
+                failed_number1 = i
+                failed_number2 = shortyear
+                timeout_seasons.append(f"{failed_number1}-{failed_number2}")
+                i += 1
+                continue
             i += 1
-    
