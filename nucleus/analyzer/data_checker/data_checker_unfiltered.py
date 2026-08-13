@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas
 from datetime import date
 
-class DataChecker:
+class UnfilteredDataChecker:
     def __init__(self):
         self.trad_team_path = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\unfiltered\\teams\\traditional")
         self.trad_player_path = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\unfiltered\\players\\traditional")
