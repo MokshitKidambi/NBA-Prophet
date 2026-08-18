@@ -19,8 +19,8 @@ class PredictorV1:
         Y_data = training_ground[self.Y]
         season_data = training_ground[self.season]
 
-        train_mask = season_data <= "2021-22"
-        test_mask = season_data >= "2022-23"
+        train_mask = season_data < "2023-24"
+        test_mask = season_data == "2023-24"
 
         X_train = X_data[train_mask]
         Y_train = Y_data[train_mask]
@@ -57,8 +57,6 @@ class PredictorV1:
         test_info = test_info.reset_index(drop = True)
         result = result.reset_index(drop = True)
 
-        # print(result.head())
-
         median_error = result["ABSOLUTE_ERROR_82"].median()
         
         print(f"Median Error: {median_error}")
@@ -75,6 +73,8 @@ class PredictorV1:
 
         print(f"Simple MAE: {simple_mae}")
         print(f"Simple MAE Wins: {simple_mae * 82}")
+
+        print(result.head())
 
     def experiment_predictor(self):
             training_ground = pandas.read_csv(self.training_ground_path)
@@ -139,9 +139,87 @@ class PredictorV1:
             print(f"Simple MAE: {simple_mae}")
             print(f"Simple MAE Wins: {simple_mae * 82}")
 
+    def predict_season(self, test_season):
+         training_ground = pandas.read_csv(self.training_ground_path)
+         X_data = training_ground[self.X]
+         Y_data = training_ground[self.Y]
+         season_data = training_ground[self.season]
+         
+         train_mask = season_data < test_season
+         test_mask = season_data == test_season
+         
+         X_train = X_data[train_mask]
+         Y_train = Y_data[train_mask]
+         
+         X_test = X_data[test_mask]
+         Y_test = Y_data[test_mask]
+         
+         model = LinearRegression()
+         
+         model.fit(X_train, Y_train)
+         
+         prediction = model.predict(X_test)
+         
+         mae = mean_absolute_error(Y_test, prediction)
+         
+         print(f"MAE: {mae}")
+         
+         test_info = training_ground.loc[test_mask, ["TEAM_NAME", "FEATURE_SEASON", "TARGET_SEASON"]]
+         
+         result = pandas.DataFrame()
+         
+         result["ACTUAL_WIN_PCT"] = Y_test
+         result["PREDICTED_WIN_PCT"] = prediction
+         
+         result["ACTUAL_WIN_82"] = result["ACTUAL_WIN_PCT"] * 82
+         result["PREDICTED_WIN_82"] = result["PREDICTED_WIN_PCT"] * 82
+         
+         result["ABSOLUTE_ERROR_82"] = abs(result["ACTUAL_WIN_82"] - result["PREDICTED_WIN_82"])
+         
+         result = pandas.concat([test_info, result], axis = 1)
+         
+         result = result.sort_values(by = "ABSOLUTE_ERROR_82", ascending = False)
+         
+         test_info = test_info.reset_index(drop = True)
+         result = result.reset_index(drop = True)
+         
+         median_error = result["ABSOLUTE_ERROR_82"].median()
+                 
+         print(f"Median Error: {median_error}")
+         
+         naive_prediction = training_ground.loc[test_mask, "W_PCT"]
+         naive_mae = mean_absolute_error(Y_test, naive_prediction)
+         
+         print(f"Naive MAE: {naive_mae}")
+         print(f"Naive MAE Wins: {naive_mae * 82}")
+         
+         simple_prediction = [0.500] * len(Y_test)
+         
+         simple_mae = mean_absolute_error(Y_test, simple_prediction)
+         
+         print(f"Simple MAE: {simple_mae}")
+         print(f"Simple MAE Wins: {simple_mae * 82}")
+         
+         print(result.head())
+
+    def take_all_seasons(self):
+         frontyear = 2017
+         backyear = (frontyear + 1) % 100
+
+         while frontyear != 2024:
+              print(f"RESULTS FOR: {frontyear}-{backyear}")
+              print()
+              self.predict_season(f"{frontyear}-{backyear}")
+              print()
+              print()
+              frontyear += 1
+              backyear = (frontyear + 1) % 100
+              continue
+        
+
 
 predictor = PredictorV1()
-predictor.experiment_predictor()
+predictor.take_all_seasons()
 
 
  
