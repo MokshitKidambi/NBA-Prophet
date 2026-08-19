@@ -1,4 +1,4 @@
-Notes from Running PredictorV1:
+# Notes from Running PredictorV1:
 
     R1 Baseline Linear Regression:
         Mean Absolute Error = 0.10748 win% ≈ 8.81 wins
@@ -192,4 +192,125 @@ Notes from Running PredictorV1:
         USG_PCT      → weighted average
         TS_PCT       → weighted average
 
-    
+    RE-RUNNING TAKE_ALL_SEASONS AFTER S8:
+        RESULTS FOR: 2017-18
+
+            MAE: 0.07078207044741519
+            Median Error: 5.800129843132272
+            Naive MAE: 0.09189999999999997
+            Naive MAE Wins: 7.535799999999997
+            Simple MAE: 0.11949999999999998
+            Simple MAE Wins: 9.798999999999998
+
+                        TEAM_NAME FEATURE_SEASON TARGET_SEASON  ACTUAL_WIN_PCT  PREDICTED_WIN_PCT  ACTUAL_WIN_82  PREDICTED_WIN_82  ABSOLUTE_ERROR_82
+            0   Cleveland Cavaliers        2017-18       2018-19           0.232           0.472657         19.024         38.757877          19.733877
+            1       Milwaukee Bucks        2017-18       2018-19           0.732           0.578005         60.024         47.396412          12.627588
+            2    Los Angeles Lakers        2017-18       2018-19           0.451           0.573918         36.982         47.061292          10.079292
+            3  New Orleans Pelicans        2017-18       2018-19           0.402           0.519881         32.964         42.630230           9.666230
+            4    Washington Wizards        2017-18       2018-19           0.390           0.506664         31.980         41.546447           9.566447
+
+
+        RESULTS FOR: 2018-19
+
+        MAE: 0.08990471697543129
+        Median Error: 6.989494078516577
+        Naive MAE: 0.09883333333333333
+        Naive MAE Wins: 8.104333333333333
+        Simple MAE: 0.13353333333333334
+        Simple MAE Wins: 10.949733333333334
+
+                    TEAM_NAME FEATURE_SEASON TARGET_SEASON  ACTUAL_WIN_PCT  PREDICTED_WIN_PCT  ACTUAL_WIN_82  PREDICTED_WIN_82  ABSOLUTE_ERROR_82
+        0  Golden State Warriors        2018-19       2019-20           0.231           0.474595         18.942         38.916784          19.974784
+        1        Toronto Raptors        2018-19       2019-20           0.736           0.558823         60.352         45.823447          14.528553
+        2         Boston Celtics        2018-19       2019-20           0.667           0.493117         54.694         40.435584          14.258416
+        3        Detroit Pistons        2018-19       2019-20           0.303           0.475797         24.846         39.015359          14.169359
+        4     Los Angeles Lakers        2018-19       2019-20           0.732           0.560336         60.024         45.947587          14.076413
+
+
+        RESULTS FOR: 2019-20
+
+            MAE: 0.08956312601538764
+            Median Error: 6.655518892651582
+            Naive MAE: 0.13103333333333333
+            Naive MAE Wins: 10.744733333333333
+            Simple MAE: 0.1157
+            Simple MAE Wins: 9.4874
+
+                            TEAM_NAME FEATURE_SEASON TARGET_SEASON  ...  ACTUAL_WIN_82  PREDICTED_WIN_82  ABSOLUTE_ERROR_82
+            0         Toronto Raptors        2019-20       2020-21  ...         30.750         51.673896          20.923896
+            1         Houston Rockets        2019-20       2020-21  ...         19.352         34.717890          15.365890
+            2  Minnesota Timberwolves        2019-20       2020-21  ...         26.158         41.180498          15.022498
+            3         New York Knicks        2019-20       2020-21  ...         46.658         33.219226          13.438774
+            4      Philadelphia 76ers        2019-20       2020-21  ...         55.842         43.046734          12.795266
+
+            [5 rows x 8 columns]
+
+
+        RESULTS FOR: 2020-21
+
+            MAE: 0.08022191291599905
+            Median Error: 6.206119731134258
+            Naive MAE: 0.0995
+            Naive MAE Wins: 8.159
+            Simple MAE: 0.11866666666666666
+            Simple MAE Wins: 9.730666666666666
+
+                            TEAM_NAME FEATURE_SEASON TARGET_SEASON  ...  ACTUAL_WIN_82  PREDICTED_WIN_82  ABSOLUTE_ERROR_82
+            0         New York Knicks        2020-21       2021-22  ...         36.982         51.632670          14.650670
+            1         Detroit Pistons        2020-21       2021-22  ...         22.960         36.688255          13.728255
+            2      Los Angeles Lakers        2020-21       2021-22  ...         32.964         46.351966          13.387966
+            3  Portland Trail Blazers        2020-21       2021-22  ...         26.978         39.735418          12.757418
+            4   Golden State Warriors        2020-21       2021-22  ...         52.972         41.212763          11.759237
+
+            [5 rows x 8 columns]
+
+
+        RESULTS FOR: 2021-22
+
+            MAE: 0.08140710510971517
+            Median Error: 6.667532969511717
+            Naive MAE: 0.0983
+            Naive MAE Wins: 8.060599999999999
+            Simple MAE: 0.09109999999999999
+            Simple MAE Wins: 7.470199999999999
+
+                        TEAM_NAME FEATURE_SEASON TARGET_SEASON  ACTUAL_WIN_PCT  PREDICTED_WIN_PCT  ACTUAL_WIN_82  PREDICTED_WIN_82  ABSOLUTE_ERROR_82
+            0  Oklahoma City Thunder        2021-22       2022-23           0.488           0.259947         40.016         21.315684          18.700316
+            1      San Antonio Spurs        2021-22       2022-23           0.268           0.470861         21.976         38.610601          16.634601
+            2       Dallas Mavericks        2021-22       2022-23           0.463           0.624681         37.966         51.223855          13.257855
+            3         Denver Nuggets        2021-22       2022-23           0.646           0.488921         52.972         40.091519          12.880481
+            4      Charlotte Hornets        2021-22       2022-23           0.329           0.479445         26.978         39.314451          12.336451
+
+
+        RESULTS FOR: 2022-23
+
+            MAE: 0.09435381863785951
+            Median Error: 7.384570411906001
+            Naive MAE: 0.10323333333333332
+            Naive MAE Wins: 8.465133333333332
+            Simple MAE: 0.13659999999999997
+            Simple MAE Wins: 11.201199999999998
+            
+                        TEAM_NAME FEATURE_SEASON TARGET_SEASON  ACTUAL_WIN_PCT  PREDICTED_WIN_PCT  ACTUAL_WIN_82  PREDICTED_WIN_82  ABSOLUTE_ERROR_82
+            0   Memphis Grizzlies        2022-23       2023-24           0.329           0.601881         26.978         49.354225          22.376225
+            1  Washington Wizards        2022-23       2023-24           0.183           0.451684         15.006         37.038053          22.032053
+            2     Detroit Pistons        2022-23       2023-24           0.171           0.382267         14.022         31.345909          17.323909
+            3     Toronto Raptors        2022-23       2023-24           0.305           0.501171         25.010         41.096008          16.086008
+            4           Utah Jazz        2022-23       2023-24           0.378           0.538012         30.996         44.117017          13.121017
+
+
+        RESULTS FOR: 2023-24
+
+            MAE: 0.09959021047328842
+            Median Error: 5.3939525392056815
+            Naive MAE: 0.11139999999999997
+            Naive MAE Wins: 9.134799999999998
+            Simple MAE: 0.1292
+            Simple MAE Wins: 10.5944
+
+                        TEAM_NAME FEATURE_SEASON TARGET_SEASON  ACTUAL_WIN_PCT  PREDICTED_WIN_PCT  ACTUAL_WIN_82  PREDICTED_WIN_82  ABSOLUTE_ERROR_82
+            0   New Orleans Pelicans        2023-24       2024-25           0.256           0.623181         20.992         51.100871          30.108871
+            1     Philadelphia 76ers        2023-24       2024-25           0.293           0.559865         24.026         45.908954          21.882954
+            2              Utah Jazz        2023-24       2024-25           0.207           0.464361         16.974         38.077612          21.103612
+            3  Oklahoma City Thunder        2023-24       2024-25           0.829           0.623725         67.978         51.145468          16.832532
+            4      Memphis Grizzlies        2023-24       2024-25           0.585           0.380818         47.970         31.227059          16.742941
