@@ -183,3 +183,13 @@ Notes from Running PredictorV1:
         2   Cleveland Cavaliers        2023-24       2024-25           0.780           0.552482         63.960         45.303525          18.656475
         3     Memphis Grizzlies        2023-24       2024-25           0.585           0.368048         47.970         30.179914          17.790086
         4       Detroit Pistons        2023-24       2024-25           0.537           0.327406         44.034         26.847328          17.186672
+
+    S3:
+        PPG          → sum
+        PLUS_MINUS   → sum
+        GP           → sum or average, depending meaning
+        MPG          → average or weighted average
+        USG_PCT      → weighted average
+        TS_PCT       → weighted average
+
+    

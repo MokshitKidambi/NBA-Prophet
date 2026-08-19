@@ -111,9 +111,13 @@ class DataProcessor:
             adv_player = files[("player", "advanced", season)]
         
             player_file_merger = player_file.merge(adv_player, on = "PLAYER_ID", how = "inner", suffixes = ("_trad", "_adv"), validate = "one_to_one")
+
+            player_file_merger["PLAYER_NAME"] = player_file_merger["PLAYER_NAME_trad"]
+            player_file_merger.drop(columns = ["PLAYER_NAME_trad", "PLAYER_NAME_adv"], inplace = True)
         
             same_player_columns = set(player_file.columns) & set(adv_player.columns)
             same_player_columns.discard("PLAYER_ID")
+            same_player_columns.discard("PLAYER_NAME")
         
             for player_column in same_player_columns:
                 trad_player_column = f"{player_column}_trad"
