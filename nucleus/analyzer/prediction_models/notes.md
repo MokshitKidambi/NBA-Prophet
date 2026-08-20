@@ -314,3 +314,9 @@
             2              Utah Jazz        2023-24       2024-25           0.207           0.464361         16.974         38.077612          21.103612
             3  Oklahoma City Thunder        2023-24       2024-25           0.829           0.623725         67.978         51.145468          16.832532
             4      Memphis Grizzlies        2023-24       2024-25           0.585           0.380818         47.970         31.227059          16.742941
+
+    Analysis after T7:
+        Model	                        Avg MAE	    Avg MAE in wins
+        Baseline only	                0.08655	    7.10 wins
+        Baseline + NET impact	        0.08372	    6.87 wins
+        Baseline + NET + RETURNING	    0.08485	    6.96 wins

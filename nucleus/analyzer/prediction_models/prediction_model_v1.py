@@ -5,7 +5,8 @@ from sklearn.metrics import mean_absolute_error
 
 class PredictorV1:
     def __init__(self):
-        self.X = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "ROSTER_AVAILABILITY"]
+        self.X = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "ROSTER_AVAILABILITY", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD"]
+        self.dummyX = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "ROSTER_AVAILABILITY"]
         self.Y = "NEXT_SEASON_WIN_PCT"
 
         self.team_experiment_features = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE"]
@@ -197,6 +198,14 @@ class PredictorV1:
 
         player_team_seasons = (player_feature_history.groupby(["TEAM_ID", "SEASON"], as_index = False))
 
+        player_feature_history["SCORING_LOAD"] = player_feature_history["PPG"] * player_feature_history["MPG"]
+        
+        player_feature_history["EFFICIENCY_LOAD"] = player_feature_history["TS_PCT"] * player_feature_history["MPG"]
+        
+        player_feature_history["USAGE_LOAD"] = player_feature_history["USG_PCT"] * player_feature_history["MPG"]
+                
+        player_feature_history["PLUS_MINUS_LOAD"] =player_feature_history["PLUS_MINUS"] * player_feature_history["MPG"]
+
         roster = {}
 
         roster_changes = []
@@ -268,17 +277,53 @@ class PredictorV1:
             roster_changes.loc[index, "OUTGOING_PPG"] = outgoing_ppg
             roster_changes.loc[index, "OUTGOING_TOTAL_MINS"] = outgoing_total_mins
 
+            outgoing_scoring_load = outgoing_stats["SCORING_LOAD"].sum()
+            roster_changes.loc[index, "OUTGOING_SCORING_LOAD"] = outgoing_scoring_load
+
+            outgoing_efficiency_load = outgoing_stats["EFFICIENCY_LOAD"].sum()
+            roster_changes.loc[index, "OUTGOING_EFFICIENCY_LOAD"] = outgoing_efficiency_load
+
+            outgoing_plus_minus_load = outgoing_stats["PLUS_MINUS_LOAD"].sum()
+            roster_changes.loc[index, "OUTGOING_PLUS_MINUS_LOAD"] = outgoing_plus_minus_load
+
+            outgoing_usage_load = outgoing_stats["USAGE_LOAD"].sum()
+            roster_changes.loc[index, "OUTGOING_USAGE_LOAD"] = outgoing_usage_load            
+
             returning_ppg = returning_stats["PPG"].sum()
             returning_total_mins = returning_stats["TOTAL_MINS"].sum()
 
             roster_changes.loc[index, "RETURNING_PPG"] = returning_ppg
             roster_changes.loc[index, "RETURNING_TOTAL_MINS"] = returning_total_mins
 
+            returning_scoring_load = incoming_stats["SCORING_LOAD"].sum()
+            roster_changes.loc[index, "RETURNING_SCORING_LOAD"] = returning_scoring_load
+
+            returning_efficiency_load = outgoing_stats["EFFICIENCY_LOAD"].sum()
+            roster_changes.loc[index, "RETURNING_EFFICIENCY_LOAD"] = returning_efficiency_load
+
+            returning_plus_minus_load = outgoing_stats["PLUS_MINUS_LOAD"].sum()
+            roster_changes.loc[index, "RETURNING_PLUS_MINUS_LOAD"] = returning_plus_minus_load
+
+            returning_usage_load = outgoing_stats["USAGE_LOAD"].sum()
+            roster_changes.loc[index, "RETURNING_USAGE_LOAD"] = returning_usage_load
+
             incoming_ppg = incoming_stats["PPG"].sum()
             incoming_total_mins = incoming_stats["TOTAL_MINS"].sum()
 
             roster_changes.loc[index, "INCOMING_PPG"] = incoming_ppg
             roster_changes.loc[index, "INCOMING_TOTAL_MINS"] = incoming_total_mins
+
+            incoming_scoring_load = incoming_stats["SCORING_LOAD"].sum()
+            roster_changes.loc[index, "INCOMING_SCORING_LOAD"] = incoming_scoring_load
+
+            incoming_efficiency_load = incoming_stats["EFFICIENCY_LOAD"].sum()
+            roster_changes.loc[index, "INCOMING_EFFICIENCY_LOAD"] = incoming_efficiency_load
+
+            incoming_plus_minus_load = incoming_stats["PLUS_MINUS_LOAD"].sum()
+            roster_changes.loc[index, "INCOMING_PLUS_MINUS_LOAD"] = incoming_plus_minus_load
+
+            incoming_usage_load = incoming_stats["USAGE_LOAD"].sum()
+            roster_changes.loc[index, "INCOMING_USAGE_LOAD"] = incoming_usage_load              
 
             team_gp = (team_stats["W"] + team_stats["L"]).iloc[0]
             old_team_stats = old_team_stats.copy()
@@ -295,13 +340,38 @@ class PredictorV1:
         
         roster_changes["RETAINED_MINUTES"] = roster_changes["RETURNING_TOTAL_MINS"] / (roster_changes["RETURNING_TOTAL_MINS"] + roster_changes["OUTGOING_TOTAL_MINS"])
 
+        roster_changes["NET_SCORING_LOAD"] = roster_changes["INCOMING_SCORING_LOAD"] - roster_changes["OUTGOING_SCORING_LOAD"]
+        roster_changes["NET_EFFICIENCY_LOAD"] = roster_changes["INCOMING_EFFICIENCY_LOAD"] - roster_changes["OUTGOING_EFFICIENCY_LOAD"]
+        roster_changes["NET_USAGE_LOAD"] = roster_changes["INCOMING_USAGE_LOAD"] - roster_changes["OUTGOING_USAGE_LOAD"]
+        roster_changes["NET_PLUS_MINUS_LOAD"] = roster_changes["INCOMING_PLUS_MINUS_LOAD"] - roster_changes["OUTGOING_PLUS_MINUS_LOAD"]
+
         merge = training_ground.merge(
                 roster_changes[[
                     "TEAM_ID",
                     "OLD_SEASON",
                     "NET_PPG_CHANGE",
                     "RETAINED_MINUTES",
-                    "ROSTER_AVAILABILITY"
+                    "ROSTER_AVAILABILITY",
+
+                    "NET_SCORING_LOAD",
+                    "NET_EFFICIENCY_LOAD",
+                    "NET_USAGE_LOAD",
+                    "NET_PLUS_MINUS_LOAD",
+
+                    "RETURNING_SCORING_LOAD",
+                    "RETURNING_EFFICIENCY_LOAD",
+                    "RETURNING_USAGE_LOAD",
+                    "RETURNING_PLUS_MINUS_LOAD",
+
+                    "INCOMING_SCORING_LOAD",
+                    "INCOMING_EFFICIENCY_LOAD",
+                    "INCOMING_USAGE_LOAD",
+                    "INCOMING_PLUS_MINUS_LOAD",
+
+                    "OUTGOING_SCORING_LOAD",
+                    "OUTGOING_EFFICIENCY_LOAD",
+                    "OUTGOING_USAGE_LOAD",
+                    "OUTGOING_PLUS_MINUS_LOAD"                    
                 ]], left_on=["TEAM_ID", "FEATURE_SEASON"], right_on=["TEAM_ID", "OLD_SEASON"], how="inner", validate="one_to_one")
 
         merge.drop(columns = ["OLD_SEASON"], inplace = True)
@@ -380,6 +450,28 @@ class PredictorV1:
               frontyear += 1
               backyear = (frontyear + 1) % 100
               continue
+
+    def traded_player_check(self):
+        player_feature_history = pandas.read_csv(self.player_feature_history)
+        random_player_id = 1627783
+        another_random_player_id = 1628384
+
+        print(player_feature_history[(player_feature_history["PLAYER_ID"] == another_random_player_id) & (player_feature_history["SEASON"] == "2023-24")]
+        [
+            ["PLAYER_ID", "PLAYER_NAME", "TEAM_ID", "SEASON", "GP", "TOTAL_MINS", "PPG"]
+        ])
+
+        player_feature_history["SCORING_LOAD"] = player_feature_history["PPG"] * player_feature_history["MPG"]
+
+        player_feature_history["EFFICIENCY_LOAD"] = player_feature_history["TS_PCT"] * player_feature_history["MPG"]
+
+        player_feature_history["USAGE_LOAD"] = player_feature_history["USG_PCT"] * player_feature_history["MPG"]
+        
+        player_feature_history["PLUS_MINUS_LOAD"] =player_feature_history["PLUS_MINUS"] * player_feature_history["MPG"]
+
+        print(player_feature_history.columns.tolist)
+        
+        
 
 
 
