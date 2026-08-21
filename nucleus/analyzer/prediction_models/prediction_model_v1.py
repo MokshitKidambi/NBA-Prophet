@@ -5,8 +5,8 @@ from sklearn.metrics import mean_absolute_error
 
 class PredictorV1:
     def __init__(self):
-        self.X = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "ROSTER_AVAILABILITY", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD"]
-        self.dummyX = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "ROSTER_AVAILABILITY"]
+        self.X = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV"]
+        self.dummyX = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV"]
         self.Y = "NEXT_SEASON_WIN_PCT"
 
         self.team_experiment_features = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE"]
@@ -19,142 +19,7 @@ class PredictorV1:
         self.team_id_list = ["1610612737", "1610612738", "1610612766", "1610612741", ""]
 
     def experiment_predictor(self):
-        team_training_ground = pandas.read_csv(self.team_training_ground_path)
-        player_feature_history = pandas.read_csv(self.player_feature_history)
-
-        team_ppg = (player_feature_history.groupby(["TEAM_ID", "SEASON"], as_index=False)["PPG"].sum())
-
-        team_ppg.rename(columns={"PPG": "ROSTER_PPG_SUM"}, inplace=True)
-
-        team_plusminus = (player_feature_history.groupby(["TEAM_ID", "SEASON"], as_index=False)["PLUS_MINUS"].sum())
-
-        player_feature_history["TS_WEIGHTED"] = (
-            player_feature_history["TS_PCT"] *
-            player_feature_history["TOTAL_MINS"]
-        )
-
-        player_feature_history["USG_WEIGHTED"] = (
-            player_feature_history["USG_PCT"] *
-            player_feature_history["TOTAL_MINS"]
-        )
-
-        team_ts = (player_feature_history.groupby(["TEAM_ID", "SEASON"], as_index = False)["TS_WEIGHTED"].sum())
-        team_usg = (player_feature_history.groupby(["TEAM_ID", "SEASON"], as_index = False)["USG_WEIGHTED"].sum())
-
-        player_team_features = team_ppg.merge(
-            team_plusminus,
-            on=["TEAM_ID", "SEASON"],
-            how="inner"
-        )
-
-        player_team_features = player_team_features.merge(
-            team_ts,
-            on=["TEAM_ID", "SEASON"],
-            how="inner"
-        )
-
-        player_team_features = player_team_features.merge(
-            team_usg,
-            on=["TEAM_ID", "SEASON"],
-            how="inner"
-        )
-        
-        player_team_seasons = (player_feature_history.groupby(["TEAM_ID", "SEASON"], as_index = False))
-
-        roster = {}
-
-        for (team_id, season), group in player_team_seasons:
-            roster[(team_id, season)] = set(group["PLAYER_ID"])
-
-        seasons = sorted(player_feature_history["SEASON"].unique())
-
-        returning_list = []
-        outgoing_list = []
-        incoming_list = []
-
-        for i in range(len(seasons) - 1):
-            old_season = seasons[i]
-            new_season = seasons[i + 1]
-
-            for team_id in player_feature_history[player_feature_history["SEASON"] == old_season]["TEAM_ID"].unique():
-
-                old_key = (team_id, old_season)
-                new_key = (team_id, new_season)
-
-                if new_key not in roster:
-                    continue
-
-                old_roster = roster[old_key]
-                new_roster = roster[new_key]
-
-                returning = old_roster & new_roster
-                outgoing = old_roster - new_roster
-                incoming = new_roster - old_roster
-
-                returning_list.append(returning)
-                outgoing_list.append(outgoing)
-                incoming_list.append(incoming)
-
-        X_data = team_training_ground[self.X]
-        Y_data = team_training_ground[self.Y]
-        season_data = team_training_ground[self.season]
-
-        train_mask = season_data < "2023-24"
-        test_mask = season_data == "2023-24"
-
-        X_train = X_data[train_mask]
-        Y_train = Y_data[train_mask]
-
-        X_test = X_data[test_mask]
-        Y_test = Y_data[test_mask]
-
-        model = LinearRegression()
-
-        model.fit(X_train, Y_train)
-
-        prediction = model.predict(X_test)
-
-        mae = mean_absolute_error(Y_test, prediction)
-
-        print(f"MAE: {mae}")
-
-        test_info = team_training_ground.loc[test_mask, ["TEAM_NAME", "FEATURE_SEASON", "TARGET_SEASON"]]
-
-        result = pandas.DataFrame()
-
-        result["ACTUAL_WIN_PCT"] = Y_test
-        result["PREDICTED_WIN_PCT"] = prediction
-
-        result["ACTUAL_WIN_82"] = result["ACTUAL_WIN_PCT"] * 82
-        result["PREDICTED_WIN_82"] = result["PREDICTED_WIN_PCT"] * 82
-
-        result["ABSOLUTE_ERROR_82"] = abs(result["ACTUAL_WIN_82"] - result["PREDICTED_WIN_82"])
-
-        result = pandas.concat([test_info, result], axis = 1)
-
-        result = result.sort_values(by = "ABSOLUTE_ERROR_82", ascending = False)
-
-        test_info = test_info.reset_index(drop = True)
-        result = result.reset_index(drop = True)
-
-        median_error = result["ABSOLUTE_ERROR_82"].median()
-        
-        print(f"Median Error: {median_error}")
-
-        naive_prediction = team_training_ground.loc[test_mask, "W_PCT"]
-        naive_mae = mean_absolute_error(Y_test, naive_prediction)
-
-        print(f"Naive MAE: {naive_mae}")
-        print(f"Naive MAE Wins: {naive_mae * 82}")
-
-        simple_prediction = [0.500] * len(Y_test)
-
-        simple_mae = mean_absolute_error(Y_test, simple_prediction)
-
-        print(f"Simple MAE: {simple_mae}")
-        print(f"Simple MAE Wins: {simple_mae * 82}")
-
-        print(result.head())
+        return
 
     def predict_season(self, test_season):
         training_ground = pandas.read_csv(self.team_training_ground_path)
@@ -330,12 +195,44 @@ class PredictorV1:
 
             old_team_stats["PLAYER_AVAILABILITY"] = (old_team_stats["GP"] / team_gp)
 
+            availability = old_team_stats["GP"] / team_gp
+
+            missed_availability = 1 - availability
+
             old_team_stats["WEIGHTED_AVAILABILITY"] = (old_team_stats["PLAYER_AVAILABILITY"] * old_team_stats["TOTAL_MINS"])
 
             roster_availability = (old_team_stats["WEIGHTED_AVAILABILITY"].sum() / old_team_stats["TOTAL_MINS"].sum())
 
             roster_changes.loc[index, "ROSTER_AVAILABILITY"] = roster_availability
-        
+
+            old_team_stats["LOST_SCORING_AVAILABILITY"] = (old_team_stats["SCORING_LOAD"] * missed_availability)
+            old_team_stats["LOST_EFFICIENCY_AVAILABILITY"] = (old_team_stats["EFFICIENCY_LOAD"] * missed_availability)
+            old_team_stats["LOST_USAGE_AVAILABILITY"] = (old_team_stats["USAGE_LOAD"] * missed_availability)
+            old_team_stats["LOST_PLUS_MINUS_AVAILABILITY"] = (old_team_stats["PLUS_MINUS_LOAD"] * missed_availability)
+
+            lost_scoring_availability = old_team_stats["LOST_SCORING_AVAILABILITY"].sum()
+            lost_efficiency_availability = old_team_stats["LOST_EFFICIENCY_AVAILABILITY"].sum()
+            lost_usage_availability = old_team_stats["LOST_USAGE_AVAILABILITY"].sum()
+            lost_plus_minus_availability = old_team_stats["LOST_PLUS_MINUS_AVAILABILITY"].sum()
+
+            roster_changes.loc[index, "LOST_SCORING_AVAILABILITY"] = lost_scoring_availability 
+            roster_changes.loc[index, "LOST_EFFICIENCY_AVAILABILITY"] = lost_efficiency_availability 
+            roster_changes.loc[index, "LOST_USAGE_AVAILABILITY"] = lost_usage_availability 
+            roster_changes.loc[index, "LOST_PLUS_MINUS_AVAILABILITY"] = lost_plus_minus_availability
+
+            core = old_team_stats.nlargest(8, "MPG")
+
+            core_availability = core["PLAYER_AVAILABILITY"].mean()
+
+            core_availability_std_dev = core["PLAYER_AVAILABILITY"].std()
+
+            core_weighted_availability = (core["PLAYER_AVAILABILITY"] * core["MPG"]).sum() / core["MPG"].sum()
+
+            roster_changes.loc[index, "CORE_AVAILABILITY"] = core_availability
+            roster_changes.loc[index, "CORE_WEIGHTED_AVAILABILITY"] = core_weighted_availability
+            roster_changes.loc[index, "CORE_AVAILABILITY_STD_DEV"] = core_availability_std_dev
+
+               
         roster_changes["NET_PPG_CHANGE"] = roster_changes["INCOMING_PPG"] - roster_changes["OUTGOING_PPG"]
         
         roster_changes["RETAINED_MINUTES"] = roster_changes["RETURNING_TOTAL_MINS"] / (roster_changes["RETURNING_TOTAL_MINS"] + roster_changes["OUTGOING_TOTAL_MINS"])
@@ -371,7 +268,16 @@ class PredictorV1:
                     "OUTGOING_SCORING_LOAD",
                     "OUTGOING_EFFICIENCY_LOAD",
                     "OUTGOING_USAGE_LOAD",
-                    "OUTGOING_PLUS_MINUS_LOAD"                    
+                    "OUTGOING_PLUS_MINUS_LOAD",
+
+                    "LOST_SCORING_AVAILABILITY",
+                    "LOST_EFFICIENCY_AVAILABILITY",
+                    "LOST_USAGE_AVAILABILITY",
+                    "LOST_PLUS_MINUS_AVAILABILITY",
+
+                    "CORE_AVAILABILITY",
+                    "CORE_WEIGHTED_AVAILABILITY",
+                    "CORE_AVAILABILITY_STD_DEV"                   
                 ]], left_on=["TEAM_ID", "FEATURE_SEASON"], right_on=["TEAM_ID", "OLD_SEASON"], how="inner", validate="one_to_one")
 
         merge.drop(columns = ["OLD_SEASON"], inplace = True)
@@ -472,11 +378,5 @@ class PredictorV1:
         print(player_feature_history.columns.tolist)
         
         
-
-
-
 predictor = PredictorV1()
 predictor.take_all_seasons()
-
-
- 
