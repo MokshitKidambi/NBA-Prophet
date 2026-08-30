@@ -315,13 +315,13 @@
             3  Oklahoma City Thunder        2023-24       2024-25           0.829           0.623725         67.978         51.145468          16.832532
             4      Memphis Grizzlies        2023-24       2024-25           0.585           0.380818         47.970         31.227059          16.742941
 
+# Notes from Running PredictorV2:
+
     Analysis after T7:
         Model	                        Avg MAE	    Avg MAE in wins
         Baseline only	                0.08655	    7.10 wins
         Baseline + NET impact	        0.08372	    6.87 wins
         Baseline + NET + RETURNING	    0.08485	    6.96 wins
-
-# Notes from Running PredictorV2
     
     AFTER CONTINUITY REFINEMENT:
         RETURNING_SCORING_LOAD has been added to feature list self.X
