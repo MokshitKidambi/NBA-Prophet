@@ -1,6 +1,8 @@
 from pathlib import Path
 import pandas
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge, ElasticNet
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error
 
 class PredictorV1:
@@ -354,12 +356,17 @@ class PredictorV1:
          
         X_test = X_data[test_mask]
         Y_test = Y_data[test_mask]
+
+        scaler = StandardScaler()
+
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
          
-        model = LinearRegression()
+        model = Ridge(alpha = 1.0)
          
-        model.fit(X_train, Y_train)
+        model.fit(X_train_scaled, Y_train)
          
-        prediction = model.predict(X_test)
+        prediction = model.predict(X_test_scaled)
          
         mae = mean_absolute_error(Y_test, prediction)
          
