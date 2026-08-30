@@ -321,6 +321,8 @@
         Baseline + NET impact	        0.08372	    6.87 wins
         Baseline + NET + RETURNING	    0.08485	    6.96 wins
 
+# Notes from Running PredictorV2
+    
     AFTER CONTINUITY REFINEMENT:
         RETURNING_SCORING_LOAD has been added to feature list self.X
 
@@ -345,4 +347,15 @@
                 HIGH                    43  5.766467  5.753845
 
         OVERARCHING ANALYSIS:
-            Teams with a HIGH and MEDIUM availability bucket do not show a crazy difference in team error wins, but there is a significant change when it comes to teams with a LOW availbility bucket. 
+            Teams with a HIGH and MEDIUM availability bucket do not show a crazy difference in team error wins, but there is a significant change when it comes to teams with a LOW availbility bucket.
+
+    MODEL SWITCH-UP:
+        Tried the following Models:
+            - Linear Regression (with standardization)
+            - Ridge Regression (with standardization)
+            - Elastic Net (Lasso Regression)
+            - Random Forest Regressor
+            - Gradient Boosting Regressor
+
+        Result: 
+            Ridge was the best, with alpha = 7.0 being the best outcome.  

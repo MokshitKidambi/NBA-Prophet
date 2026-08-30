@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error
 
-class PredictorV1:
+class PredictorV2:
     def __init__(self):
         self.X = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV", "RETURNING_SCORING_SHARE"]
         self.dummyX = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV", "RETURNING_SCORING_SHARE"]
@@ -465,5 +465,5 @@ class PredictorV1:
         print(player_feature_history.columns.tolist)
         
         
-predictor = PredictorV1()
+predictor = PredictorV2()
 predictor.take_all_seasons()
