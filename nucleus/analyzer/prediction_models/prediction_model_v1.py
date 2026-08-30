@@ -16,8 +16,6 @@ class PredictorV1:
         self.player_feature_history = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\features\\player_feature_history.csv")
         self.season = "FEATURE_SEASON"
 
-        self.team_id_list = ["1610612737", "1610612738", "1610612766", "1610612741", ""]
-
     def experiment_predictor(self):
         return
 
