@@ -362,7 +362,7 @@ class PredictorV1:
         X_train_scaled = scaler.fit_transform(X_train)
         X_test_scaled = scaler.transform(X_test)
          
-        model = Ridge(alpha = 1.0)
+        model = Ridge(alpha = 7.0)
          
         model.fit(X_train_scaled, Y_train)
          
