@@ -320,3 +320,29 @@
         Baseline only	                0.08655	    7.10 wins
         Baseline + NET impact	        0.08372	    6.87 wins
         Baseline + NET + RETURNING	    0.08485	    6.96 wins
+
+    AFTER CONTINUITY REFINEMENT:
+        RETURNING_SCORING_LOAD has been added to feature list self.X
+
+    THOUGHT EXPERIMENT: SEASONAL INJURIES
+        In the model, the 2019-20 Golden State Warriors were predicted to have a record of 37 wins, but only ended up with 18, where the assumption the model made was that Stephen Curry did not suffer a season-ending injury and rather grouped his played stats with the rest of the team. 
+        
+        So, TARGET_OLD_CORE_AVAILABILITY measured how available the core players from a previous season were in the target season and seeing if the metric has any correlation with PREDICTED & ABSOLUTE_ERROR_82. 
+
+        RESULT: 
+            PREDICTED_ERROR_82:
+                                       count mean      median
+                AVAILABILITY_BUCKET                           
+                LOW                     49   4.344427  5.732124
+                MEDIUM                 118  -0.515468 -0.305365
+                HIGH                    43  -0.529919  0.571478
+
+            ABSOLUTE_ERROR_82:
+                                     count  mean      median
+                AVAILABILITY_BUCKET                           
+                LOW                     49  7.664860  6.737614
+                MEDIUM                 118  6.865068  6.369614
+                HIGH                    43  5.766467  5.753845
+
+        OVERARCHING ANALYSIS:
+            Teams with a HIGH and MEDIUM availability bucket do not show a crazy difference in team error wins, but there is a significant change when it comes to teams with a LOW availbility bucket. 

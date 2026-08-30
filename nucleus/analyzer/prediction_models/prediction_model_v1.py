@@ -5,8 +5,8 @@ from sklearn.metrics import mean_absolute_error
 
 class PredictorV1:
     def __init__(self):
-        self.X = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV"]
-        self.dummyX = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV"]
+        self.X = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV", "RETURNING_SCORING_SHARE"]
+        self.dummyX = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV", "RETURNING_SCORING_SHARE"]
         self.Y = "NEXT_SEASON_WIN_PCT"
 
         self.team_experiment_features = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE"]
@@ -111,6 +111,7 @@ class PredictorV1:
         for index, row in roster_changes.iterrows():
 
             SEASON = row["OLD_SEASON"]
+            TARGET_SEASON = row["NEW_SEASON"]
             outgoing_players = row["OUTGOING"]
             returning_players = row["RETURNING"]
             incoming_players = row["INCOMING"]
@@ -118,11 +119,13 @@ class PredictorV1:
 
             outgoing_stats = player_feature_history[
                 (player_feature_history["SEASON"] == SEASON) &
+                (player_feature_history["TEAM_ID"] == TEAM_ID) &
                 (player_feature_history["PLAYER_ID"].isin(outgoing_players))
             ]
 
             returning_stats = player_feature_history[
                 (player_feature_history["SEASON"] == SEASON) &
+                (player_feature_history["TEAM_ID"] == TEAM_ID) &
                 (player_feature_history["PLAYER_ID"].isin(returning_players))
             ]
 
@@ -132,7 +135,9 @@ class PredictorV1:
             ]
 
             team_stats = training_ground[(training_ground["FEATURE_SEASON"] == SEASON) & (training_ground["TEAM_ID"] == TEAM_ID)]
+            target_team_stats = training_ground[(training_ground["FEATURE_SEASON"] == TARGET_SEASON) & (training_ground["TEAM_ID"] == TEAM_ID)]
             old_team_stats = player_feature_history[(player_feature_history["SEASON"] == SEASON) & (player_feature_history["TEAM_ID"] == TEAM_ID)]
+            new_team_stats = player_feature_history[(player_feature_history["SEASON"] == TARGET_SEASON) & (player_feature_history["TEAM_ID"] == TEAM_ID)]
 
             outgoing_ppg = outgoing_stats["PPG"].sum()
             outgoing_total_mins = outgoing_stats["TOTAL_MINS"].sum()
@@ -158,16 +163,16 @@ class PredictorV1:
             roster_changes.loc[index, "RETURNING_PPG"] = returning_ppg
             roster_changes.loc[index, "RETURNING_TOTAL_MINS"] = returning_total_mins
 
-            returning_scoring_load = incoming_stats["SCORING_LOAD"].sum()
+            returning_scoring_load = returning_stats["SCORING_LOAD"].sum()
             roster_changes.loc[index, "RETURNING_SCORING_LOAD"] = returning_scoring_load
 
-            returning_efficiency_load = outgoing_stats["EFFICIENCY_LOAD"].sum()
+            returning_efficiency_load = returning_stats["EFFICIENCY_LOAD"].sum()
             roster_changes.loc[index, "RETURNING_EFFICIENCY_LOAD"] = returning_efficiency_load
 
-            returning_plus_minus_load = outgoing_stats["PLUS_MINUS_LOAD"].sum()
+            returning_plus_minus_load = returning_stats["PLUS_MINUS_LOAD"].sum()
             roster_changes.loc[index, "RETURNING_PLUS_MINUS_LOAD"] = returning_plus_minus_load
 
-            returning_usage_load = outgoing_stats["USAGE_LOAD"].sum()
+            returning_usage_load = returning_stats["USAGE_LOAD"].sum()
             roster_changes.loc[index, "RETURNING_USAGE_LOAD"] = returning_usage_load
 
             incoming_ppg = incoming_stats["PPG"].sum()
@@ -186,9 +191,23 @@ class PredictorV1:
             roster_changes.loc[index, "INCOMING_PLUS_MINUS_LOAD"] = incoming_plus_minus_load
 
             incoming_usage_load = incoming_stats["USAGE_LOAD"].sum()
-            roster_changes.loc[index, "INCOMING_USAGE_LOAD"] = incoming_usage_load              
+            roster_changes.loc[index, "INCOMING_USAGE_LOAD"] = incoming_usage_load
+
+            old_team_scoring_load = old_team_stats["SCORING_LOAD"].sum()
+            old_team_efficiency_load = old_team_stats["EFFICIENCY_LOAD"].sum()
+            old_team_usage_load = old_team_stats["USAGE_LOAD"].sum()
+
+            returning_scoring_share = returning_scoring_load / old_team_scoring_load
+            roster_changes.loc[index, "RETURNING_SCORING_SHARE"] = returning_scoring_share
+
+            returning_efficiency_share = returning_efficiency_load / old_team_efficiency_load
+            roster_changes.loc[index, "RETURNING_EFFICIENCY_SHARE"] = returning_efficiency_share
+
+            returning_usage_share = returning_usage_load / old_team_usage_load
+            roster_changes.loc[index, "RETURNING_USAGE_SHARE"] = returning_usage_share         
 
             team_gp = (team_stats["W"] + team_stats["L"]).iloc[0]
+
             old_team_stats = old_team_stats.copy()
 
             old_team_stats["PLAYER_AVAILABILITY"] = (old_team_stats["GP"] / team_gp)
@@ -219,8 +238,44 @@ class PredictorV1:
             roster_changes.loc[index, "LOST_PLUS_MINUS_AVAILABILITY"] = lost_plus_minus_availability
 
             core = old_team_stats.nlargest(8, "MPG")
+            core_player_ids = set(core["PLAYER_ID"])
+
+            if target_team_stats.empty:
+                roster_changes.loc[index, "TARGET_OLD_CORE_AVAILABILITY"] = pandas.NA
+
+            else:
+                target_team_gp = (
+                    target_team_stats["W"] + target_team_stats["L"]
+                ).iloc[0]
+
+                new_team_stats = new_team_stats.copy()
+
+                new_team_stats["PLAYER_AVAILABILITY"] = (
+                    new_team_stats["GP"] / target_team_gp
+                )
+
+                old_core_stats = new_team_stats[
+                    new_team_stats["PLAYER_ID"].isin(core_player_ids)
+                ]
+
+                target_core_availability = (
+                    old_core_stats
+                    .set_index("PLAYER_ID")["PLAYER_AVAILABILITY"]
+                    .reindex(core_player_ids, fill_value=0)
+                )
+
+                target_availability = target_core_availability.mean()
+
+                roster_changes.loc[
+                    index, "TARGET_OLD_CORE_AVAILABILITY"
+                ] = target_availability
 
             core_availability = core["PLAYER_AVAILABILITY"].mean()
+
+            returning_core = core_player_ids & returning_players
+
+            returning_core_share = len(returning_core) / len(core_player_ids)
+            roster_changes.loc[index, "RETURNING_CORE_SHARE"] = returning_core_share
 
             core_availability_std_dev = core["PLAYER_AVAILABILITY"].std()
 
@@ -275,7 +330,14 @@ class PredictorV1:
 
                     "CORE_AVAILABILITY",
                     "CORE_WEIGHTED_AVAILABILITY",
-                    "CORE_AVAILABILITY_STD_DEV"                   
+                    "CORE_AVAILABILITY_STD_DEV",
+
+                    "RETURNING_SCORING_SHARE",
+                    "RETURNING_EFFICIENCY_SHARE",
+                    "RETURNING_USAGE_SHARE",
+                    "RETURNING_CORE_SHARE",
+
+                    "TARGET_OLD_CORE_AVAILABILITY"                   
                 ]], left_on=["TEAM_ID", "FEATURE_SEASON"], right_on=["TEAM_ID", "OLD_SEASON"], how="inner", validate="one_to_one")
 
         merge.drop(columns = ["OLD_SEASON"], inplace = True)
@@ -303,7 +365,7 @@ class PredictorV1:
          
         print(f"MAE: {mae}")
          
-        test_info = training_ground.loc[test_mask, ["TEAM_NAME", "FEATURE_SEASON", "TARGET_SEASON"]]
+        test_info = merge.loc[test_mask, ["TEAM_NAME", "FEATURE_SEASON", "TARGET_SEASON", "TARGET_OLD_CORE_AVAILABILITY"]]
          
         result = pandas.DataFrame()
          
@@ -314,6 +376,7 @@ class PredictorV1:
         result["PREDICTED_WIN_82"] = result["PREDICTED_WIN_PCT"] * 82
          
         result["ABSOLUTE_ERROR_82"] = abs(result["ACTUAL_WIN_82"] - result["PREDICTED_WIN_82"])
+        result["PREDICTION_ERROR_82"] = (result["PREDICTED_WIN_82"] - result["ACTUAL_WIN_82"])
          
         result = pandas.concat([test_info, result], axis = 1)
          
@@ -339,25 +402,44 @@ class PredictorV1:
         print(f"Simple MAE: {simple_mae}")
         print(f"Simple MAE Wins: {simple_mae * 82}")
          
-        print(result.head())
+        # print(result.head())
+        # print(result[["TEAM_NAME", "TARGET_OLD_CORE_AVAILABILITY", "PREDICTION_ERROR_82", "ABSOLUTE_ERROR_82"]].head(10))
+
+        return result
 
     def take_all_seasons(self):
+         results = []
          frontyear = 2017
          backyear = (frontyear + 1) % 100
 
          while frontyear != 2024:
               print(f"RESULTS FOR: {frontyear}-{backyear}")
               print()
-              self.predict_season(f"{frontyear}-{backyear}")
+              result = self.predict_season(f"{frontyear}-{backyear}")
+              results.append(result)
               print()
               print()
               frontyear += 1
               backyear = (frontyear + 1) % 100
               continue
 
+         result_comb = pandas.concat(results, ignore_index=True)
+
+         result_comb["AVAILABILITY_BUCKET"] = pandas.cut(
+            result_comb["TARGET_OLD_CORE_AVAILABILITY"],
+            bins=[0, 0.35, 0.65, 1.0],
+            labels=["LOW", "MEDIUM", "HIGH"],
+            include_lowest=True
+        )
+
+         print(
+            result_comb.groupby("AVAILABILITY_BUCKET")[
+                "ABSOLUTE_ERROR_82"
+            ].agg(["count", "mean", "median"])
+        )
+
     def traded_player_check(self):
         player_feature_history = pandas.read_csv(self.player_feature_history)
-        random_player_id = 1627783
         another_random_player_id = 1628384
 
         print(player_feature_history[(player_feature_history["PLAYER_ID"] == another_random_player_id) & (player_feature_history["SEASON"] == "2023-24")]
