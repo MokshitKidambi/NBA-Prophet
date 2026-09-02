@@ -717,6 +717,8 @@ class PredictorV5:
         
         future_data["DISPLAY_WINS"] = (future_data["ADJUSTED_WINS"].round().astype(int))
 
+        future_data["DISPLAY_LOSSES"] = (82 - future_data["DISPLAY_WINS"])
+
         future_data["DISPLAY_OPTIMISTIC_WINS"] = (
             future_data["OPTIMISTIC_WINS"].round().astype(int)
         )
@@ -980,7 +982,7 @@ class PredictorV5:
         result, hist_data = self.predict_season("2023-24")
         future_data = self.train_final_model(hist_data)
 
-        new_future_data = future_data[["TEAM_NAME", "TEAM_ID", "ADJUSTED_WINS", "DISPLAY_WINS", "DISPLAY_OPTIMISTIC_WINS", "DISPLAY_PESSIMISTIC_WINS", "ROSTER_CONFIDENCE", "ROSTER_SENSITIVITY", "INCOMING_STAT_COVERAGE"]]
+        new_future_data = future_data[["TEAM_NAME", "TEAM_ID", "ADJUSTED_WINS", "DISPLAY_WINS", "DISPLAY_LOSSES", "DISPLAY_OPTIMISTIC_WINS", "DISPLAY_PESSIMISTIC_WINS", "ROSTER_CONFIDENCE", "ROSTER_SENSITIVITY", "INCOMING_STAT_COVERAGE"]]
 
         new_future_data.to_csv("data/display/engine_display_file.csv", index=False)
 
@@ -989,5 +991,7 @@ class PredictorV5:
 predictor = PredictorV5()
 result, hist_data = predictor.predict_season("2023-24")
 
-future_predictions = predictor.train_final_model(hist_data)
+#future_predictions = predictor.train_final_model(hist_data)
+
+predictor.new_file()
 
