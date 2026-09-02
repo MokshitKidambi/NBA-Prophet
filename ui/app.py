@@ -76,54 +76,113 @@ west = predictions[
 east["SEED"] = east.index + 1
 west["SEED"] = west.index + 1
 
+west["LOGO"] = west["TEAM_ID"].apply(
+    lambda team_id:
+        f"https://cdn.nba.com/logos/nba/{int(team_id)}/primary/L/logo.svg"
+)
+
+east["LOGO"] = east["TEAM_ID"].apply(
+    lambda team_id:
+        f"https://cdn.nba.com/logos/nba/{int(team_id)}/primary/L/logo.svg"
+)
+
 col1, col2 = st.columns(2)
 
-with col1:
-    st.subheader("Eastern Conference")
+if "reveal_stage" not in st.session_state:
+    st.session_state.reveal_stage = 0
 
-    st.dataframe(
-        east[
-            [
-                "SEED",
-                "TEAM_NAME",
-                "DISPLAY_WINS",
-                "DISPLAY_LOSSES",
-                "ROSTER_CONFIDENCE",
-                "ROSTER_SENSITIVITY"
-            ]
-        ].rename(
-            columns={
-                "TEAM_NAME": "Team",
-                "DISPLAY_WINS": "Projected Wins",
-                "DISPLAY_LOSSES": "Projected Losses",
-                "ROSTER_CONFIDENCE": "Roster Confidence",
-                "ROSTER_SENSITIVITY": "Roster Sensitivity"
+if st.session_state.reveal_stage == 0:
+    if st.button("Reveal Predictions"):
+        st.session_state.reveal_stage = 1
+        st.rerun()
+else:
+    if st.button("Hide Predictions"):
+        st.session_state.reveal_stage = 0
+        st.rerun()
+
+if st.session_state.reveal_stage >= 1:
+    with col1:
+        st.subheader("Eastern Conference")
+        east_display = east[
+                [
+                    "SEED",
+                    "LOGO",
+                    "TEAM_NAME",
+                    "DISPLAY_WINS",
+                    "DISPLAY_LOSSES",
+                    "ROSTER_CONFIDENCE",
+                    "ROSTER_SENSITIVITY"
+                ]
+            ].rename(
+                columns={
+                    "TEAM_NAME": "Team",
+                    "DISPLAY_WINS": "Projected Wins",
+                    "DISPLAY_LOSSES": "Projected Losses",
+                    "ROSTER_CONFIDENCE": "Roster Confidence",
+                    "ROSTER_SENSITIVITY": "Roster Sensitivity"
+                }
+            )
+        east_event = st.dataframe(
+            east_display,
+            hide_index=True,
+            use_container_width=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            column_config={
+                "LOGO": st.column_config.ImageColumn(
+                    "Logo",
+                    width="small"
+                )
             }
-        ),
-        hide_index=True,
-        use_container_width=True
-    )
+        )
 
-with col2:
-    st.subheader("Western Conference")
-
-    st.dataframe(
-        west[
-            [
-                "SEED",
-                "TEAM_NAME",
-                "DISPLAY_WINS",
-                "ROSTER_CONFIDENCE",
-                "ROSTER_SENSITIVITY"
-            ]
-        ].rename(
-            columns={
-                "TEAM_NAME": "Team",
-                "DISPLAY_WINS": "Projected Wins",
-                "ROSTER_CONFIDENCE": "Roster Confidence",
-                "ROSTER_SENSITIVITY": "Roster Sensitivity"
+    with col2:
+        st.subheader("Western Conference")
+        west_display = west[
+                [
+                    "SEED",
+                    "LOGO",
+                    "TEAM_NAME",
+                    "DISPLAY_WINS",
+                    "DISPLAY_LOSSES",
+                    "ROSTER_CONFIDENCE",
+                    "ROSTER_SENSITIVITY"
+                ]
+            ].rename(
+                columns={
+                    "TEAM_NAME": "Team",
+                    "DISPLAY_WINS": "Projected Wins",
+                    "DISPLAY_LOSSES": "Projected Losses",
+                    "ROSTER_CONFIDENCE": "Roster Confidence",
+                    "ROSTER_SENSITIVITY": "Roster Sensitivity"
+                }
+            )
+        west_event = st.dataframe(
+            west_display,
+            hide_index=True,
+            use_container_width=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            column_config={
+                "LOGO": st.column_config.ImageColumn(
+                    "Logo",
+                    width="small"
+                )
             }
-        ),
-        hide_index=True,
-        use_container_width=True
-    )
+        )
+
+    if east_event.selection.rows:
+        selected_index = east_event.selection.rows[0]
+
+        st.session_state.selected_team = (
+            east.iloc[selected_index]["TEAM_NAME"]
+        )
+        st.switch_page("pages/team_details.py")
+
+    elif west_event.selection.rows:
+        selected_index = west_event.selection.rows[0]
+
+        st.session_state.selected_team = (
+            west.iloc[selected_index]["TEAM_NAME"]
+        )
+        st.switch_page("pages/team_details.py")
