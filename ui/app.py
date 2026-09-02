@@ -6,9 +6,16 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("Welcome to NBA Prophet")
-st.subheader("The best prediction engine for the NBA")
-st.subheader("2026-27 Season Predictions")
+st.markdown(
+    """
+    <div style="text-align: center;">
+        <h1>Welcome to NBA Prophet</h1>
+        <h3>The best prediction engine for the NBA</h3>
+        <h3>2026–27 Season Predictions</h3>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 team_conference = {
     "Atlanta Hawks": "East",
@@ -91,14 +98,26 @@ col1, col2 = st.columns(2)
 if "reveal_stage" not in st.session_state:
     st.session_state.reveal_stage = 0
 
-if st.session_state.reveal_stage == 0:
-    if st.button("Reveal Predictions"):
-        st.session_state.reveal_stage = 1
-        st.rerun()
-else:
-    if st.button("Hide Predictions"):
-        st.session_state.reveal_stage = 0
-        st.rerun()
+left, center, right = st.columns([2, 1, 2])
+
+with center:
+    if st.session_state.reveal_stage == 0:
+
+        if st.button(
+            "Reveal Predictions",
+            use_container_width=True
+        ):
+            st.session_state.reveal_stage = 1
+            st.rerun()
+
+    else:
+
+        if st.button(
+            "Hide Predictions",
+            use_container_width=True
+        ):
+            st.session_state.reveal_stage = 0
+            st.rerun()
 
 if st.session_state.reveal_stage >= 1:
     with col1:

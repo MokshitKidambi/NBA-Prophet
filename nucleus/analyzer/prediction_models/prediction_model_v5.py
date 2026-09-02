@@ -4,6 +4,7 @@ from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error
 from nba_api.stats.endpoints import commonallplayers
+from nba_api.stats.endpoints import playerindex
 
 class PredictorV5:
     def __init__(self):
@@ -739,6 +740,7 @@ class PredictorV5:
             season="2026-27"
         ).get_data_frames()[0]
 
+
         all_rosters = players[players["TEAM_ID"] != 0][["TEAM_ID", "PERSON_ID", "DISPLAY_FIRST_LAST", "ROSTERSTATUS"]].copy()
 
         all_rosters.rename(
@@ -988,10 +990,52 @@ class PredictorV5:
 
         return new_future_data
 
+    def _2027_roster(self):
+        players = commonallplayers.CommonAllPlayers(
+            is_only_current_season=1,
+            league_id="00",
+            season="2026-27"
+        ).get_data_frames()[0]
+
+        player_positions = playerindex.PlayerIndex(season="2026-27").get_data_frames()[0]
+
+        player_positions = player_positions[
+            [
+                "PERSON_ID",
+                "TEAM_ID",
+                "POSITION"
+            ]
+        ].rename(
+            columns={
+                "PERSON_ID": "PLAYER_ID"
+            }
+        )
+        all_rosters = players[players["TEAM_ID"] != 0][["TEAM_ID", "PERSON_ID", "DISPLAY_FIRST_LAST", "ROSTERSTATUS"]].copy()
+
+        all_rosters.rename(
+            columns={
+                "PERSON_ID": "PLAYER_ID",
+                "DISPLAY_FIRST_LAST": "PLAYER_NAME"
+            },
+            inplace=True
+        )
+
+        all_rosters["SEASON"] = "2026-27"
+
+        future_roster = all_rosters.merge(
+            player_positions[
+                ["PLAYER_ID", "POSITION"]
+            ],
+            on="PLAYER_ID",
+            how="left"
+        )
+
+        future_roster.to_csv("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\future_roster.csv", index=False)
+
 predictor = PredictorV5()
 result, hist_data = predictor.predict_season("2023-24")
 
 #future_predictions = predictor.train_final_model(hist_data)
 
-predictor.new_file()
+predictor._2027_roster()
 
