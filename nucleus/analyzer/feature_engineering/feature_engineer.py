@@ -24,7 +24,7 @@ class FeatureEngineer:
         self.player_efficiency_features = ["TS_PCT"]
         self.player_impact_features = ["PLUS_MINUS"]
         self.future_player_impact_features = ["BPM", "VORP"]
-        self.player_role_features = ["USG_PCT", "TOTAL_MINS", "MPG" "GP"]
+        self.player_role_features = ["USG_PCT", "TOTAL_MINS", "MPG", "GP"]
         self.player_availability_features = ["GP", "TOTAL_MINS", "MPG"]
 
         self.team_features = (self.team_scoring_features + self.team_efficiency_features + self.team_possession_features + self.team_context_features + self.team_record_features)
@@ -66,6 +66,27 @@ class FeatureEngineer:
                     team_training_sim.drop(columns = columns, inplace = True)
             self.team_training_sim_arena.append(team_training_sim)
 
+        latest_file = self.team_season_files[-1]
+        latest_data = pandas.read_csv(latest_file)
+
+        latest_data["PPG"] = latest_data["PTS"] / latest_data["GP"]
+
+        latest_data["FEATURE_SEASON"] = latest_data["SEASON"]
+        latest_data["TARGET_SEASON"] = "2026-27"
+        latest_data["NEXT_SEASON_WIN_PCT"] = pandas.NA
+
+        for column in latest_data.columns:
+            if (
+                column in self.team_metadata_columns
+                or column in self.team_features
+                or column == self.target_column
+            ):
+                continue
+            else:
+                latest_data.drop(columns=column, inplace=True)
+
+        self.team_training_sim_arena.append(latest_data)
+
         for season in range(len(self.player_season_files)):
             player_data_file = self.player_season_files[season]
             player_data_file_reader = pandas.read_csv(player_data_file)
@@ -82,9 +103,6 @@ class FeatureEngineer:
 
         team_training_arena = pandas.concat(self.team_training_sim_arena)
         team_training_arena.to_csv(self.feature_path / "training_ground.csv", index = False)
-
-        correlations = team_training_arena[self.team_features + ["NEXT_SEASON_WIN_PCT"]].corr()["NEXT_SEASON_WIN_PCT"]
-        corr_matrix = team_training_arena[self.team_features].corr()
 
         X = team_training_arena[self.team_model_features]
         Y = team_training_arena[self.target_column]
