@@ -31,3 +31,9 @@ L          -0.221522 -0.420631   -0.442808    0.468576   -0.928218    0.245499  
 W_PCT       0.264046  0.474636    0.500167   -0.449229    0.968443   -0.283308  ...  0.210707   0.380138 -0.075331  0.960866 -0.958578  1.000000
 
 [13 rows x 13 columns]
+
+MISSING STATS NOTES:
+
+    RECENT → usable fallback
+    AGING  → usable, but lower confidence
+    STALE  → flag for special handling

@@ -6,4 +6,7 @@ Main Glossaries: https://www.basketball-reference.com/about/glossary.html
     Pace: https://www.nbastuffer.com/analytics101/pace/
     AST Ratio: https://www.espn.com/nba/hollinger/teamstats/_/sort/assistRatio
     BPM & VORP: https://www.basketball-reference.com/about/bpm2.html
+
+Injuries: https://www.espn.com/nba/injuries
+
     
