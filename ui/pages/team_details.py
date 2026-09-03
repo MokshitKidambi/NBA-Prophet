@@ -49,50 +49,77 @@ logo_url = (
     f"{int(team['TEAM_ID'])}/primary/L/logo.svg"
 )
 
-st.image(
-    logo_url,
-    width=140
-)
+top_left, top_right = st.columns([1,1])
 
-st.title(team["TEAM_NAME"])
+with top_left:
+    st.image(
+        logo_url,
+        width=140
+    )
 
-team["PROJECTED_RECORD"] = f"{team["DISPLAY_WINS"]} - {team["DISPLAY_LOSSES"]}"
+    st.title(team["TEAM_NAME"])
 
-st.write(
-    "### Projected Record: ",
-    team["PROJECTED_RECORD"]
-)
+    team["PROJECTED_RECORD"] = (
+        f"{team['DISPLAY_WINS']} - {team['DISPLAY_LOSSES']}"
+    )
 
-st.write(
-    "- Roster Confidence:",
-    team["ROSTER_CONFIDENCE"]
-)
+    st.subheader(
+        f"Projected Record: {team['PROJECTED_RECORD']}"
+    )
 
-st.write(
-    "- Roster Sensitivity:",
-    team["ROSTER_SENSITIVITY"]
-)
+    st.write(
+        f"• Roster Confidence: {team['ROSTER_CONFIDENCE']}"
+    )
 
-col1, col2 = st.columns(2)
+    st.write(
+        f"• Roster Sensitivity: {team['ROSTER_SENSITIVITY']}"
+    )
+    
+with top_right:
 
-with col1:
-    st.subheader("Top Positive Contributors")
+    st.header("What Drives the Prediction?")
 
-    for i in range(1, 4):
-        feature = team[f"TOP_POSITIVE_CONTRIBUTOR_{i}"]
-        wins = team[f"TOP_POSITIVE_CONTRIBUTOR_{i}_WINS"]
-        
-        st.write(f"▲ {feature}: +{wins:.2f} wins")
+    positive_col, negative_col = st.columns(2)
 
+    with positive_col:
+        st.subheader("Top 3 Positive Contributors")
 
-with col2:
-    st.subheader("Top Negative Contributors")
+        for i in range(1, 4):
+            feature = team[
+                f"TOP_POSITIVE_CONTRIBUTOR_{i}"
+            ]
 
-    for i in range(1, 4):
-        feature = team[f"TOP_NEGATIVE_CONTRIBUTOR_{i}"]
-        wins = team[f"TOP_NEGATIVE_CONTRIBUTOR_{i}_WINS"]
+            wins = team[
+                f"TOP_POSITIVE_CONTRIBUTOR_{i}_WINS"
+            ]
 
-        st.write(f"▼ {feature}: {wins:.2f} wins")
+            st.write(
+                f"▲ {feature}"
+            )
+
+            st.caption(
+                f"+{wins:.2f} wins"
+            )
+
+    with negative_col:
+        st.subheader("Top 3 Negative Contributors")
+
+        for i in range(1, 4):
+            feature = team[
+                f"TOP_NEGATIVE_CONTRIBUTOR_{i}"
+            ]
+
+            wins = team[
+                f"TOP_NEGATIVE_CONTRIBUTOR_{i}_WINS"
+            ]
+
+            st.write(
+                f"▼ {feature}"
+            )
+
+            st.caption(
+                f"{wins:.2f} wins"
+            )
 
 for column in ["RETURNING", "OUTGOING", "INCOMING"]:
     roster_changes[column] = roster_changes[column].apply(ast.literal_eval)
@@ -133,6 +160,10 @@ team_lineup = team_future_roster.merge(
     player_2025_26[
         [
             "PLAYER_ID",
+            "PPG",
+            "PLUS_MINUS",
+            "TS_PCT",
+            "GP",
             "MPG"
         ]
     ],
@@ -167,11 +198,34 @@ team_lineup = team_lineup.merge(
 
 team_lineup["STATUS"] = team_lineup["STATUS"].fillna("Healthy")
 
+scoring_leader = team_lineup.sort_values(
+    "PPG",
+    ascending=False
+).iloc[0]
+
+minutes_leader = team_lineup.sort_values(
+    "MPG",
+    ascending=False
+).iloc[0]
+
+impact_leader = team_lineup.sort_values(
+    "PLUS_MINUS",
+    ascending=False
+).iloc[0]
+
+efficiency_leader = team_lineup.sort_values(
+    "TS_PCT",
+    ascending=False
+).iloc[0]
+
+availability_leader = team_lineup.sort_values(
+    "GP",
+    ascending=False
+).iloc[0]
+
 unavailable_statuses = ["Out", "Doubtful"]
 
-available_players = team_lineup[
-    ~team_lineup["STATUS"].isin(unavailable_statuses)
-]
+available_players = team_lineup[team_lineup["STATUS"] == "Healthy"]
 
 projected_starters = available_players.head(5).copy()
 
@@ -214,8 +268,6 @@ bench = bench.sort_values(
 
 projected_starters["LINEUP_POSITION"] = lineup_positions
 
-st.subheader("Projected Lineup")
-
 st.subheader("Projected Starters")
 
 starter_columns = st.columns(len(projected_starters))
@@ -256,21 +308,129 @@ for start in range(0, len(bench), players_per_row):
             
             display_player_status(player)
 
-st.subheader("Roster Changes")
+st.header("Projected Leaders")
+
+scoring_col, minutes_col, impact_col, efficiency_col, availability_col = st.columns(5)
+
+with scoring_col:
+    st.subheader("Scoring")
+
+    st.image(
+        scoring_leader["PLAYER_IMAGE"],
+        width=120
+    )
+
+    st.write(
+        scoring_leader["PLAYER_NAME"]
+    )
+
+    st.metric(
+        "PPG",
+        f"{scoring_leader['PPG']:.1f}"
+    )
+    
+with minutes_col:
+    st.subheader("Minutes")
+
+    st.image(
+        minutes_leader["PLAYER_IMAGE"],
+        width=120
+    )
+
+    st.write(
+        minutes_leader["PLAYER_NAME"]
+    )
+
+    st.metric(
+        "MPG",
+        f"{minutes_leader['MPG']:.1f}"
+    )
+    
+with impact_col:
+    st.subheader("Impact")
+
+    st.image(
+        impact_leader["PLAYER_IMAGE"],
+        width=120
+    )
+
+    st.write(
+        impact_leader["PLAYER_NAME"]
+    )
+
+    if int(impact_leader["PLUS_MINUS"]) > 0:    
+        st.metric(
+            "PLUS_MINUS",
+            f"+{impact_leader['PLUS_MINUS']:.1f}"
+        )
+    else:
+        st.metric(
+            "PLUS_MINUS",
+            f"{impact_leader['PLUS_MINUS']:.1f}"
+        )
+        
+with efficiency_col:
+    st.subheader("Efficiency")
+
+    st.image(
+        efficiency_leader["PLAYER_IMAGE"],
+        width=120
+    )
+
+    st.write(
+        efficiency_leader["PLAYER_NAME"]
+    )
+
+    st.metric(
+        "TS_PCT",
+        f"{efficiency_leader['TS_PCT'] * 100}%"
+    )
+
+with availability_col:
+    st.subheader("Availability")
+
+    st.image(
+        availability_leader["PLAYER_IMAGE"],
+        width=120
+    )
+
+    st.write(
+        availability_leader["PLAYER_NAME"]
+    )
+
+    st.metric(
+        "Games Played",
+        f"{round(availability_leader['GP'])}"
+    )
+
+st.title("Roster Changes")
 
 st.subheader("Returning Players")
-returning_columns = st.columns(len(returning_names))
+players_per_row = 6
 
-for column, (_, player) in zip(
-    returning_columns,
-    returning_names.iterrows()
-):
-    with column:
-        st.image(
-            player_image_url(player["PLAYER_ID"]),
-            width=90
-        )
-        st.write(player["PLAYER_NAME"])
+for start in range(0, len(returning_names), players_per_row):
+
+    returning_group = returning_names.iloc[
+        start:start + players_per_row
+    ]
+
+    returning_columns = st.columns(
+        len(returning_group)
+    )
+
+    for column, (_, player) in zip(
+        returning_columns,
+        returning_group.iterrows()
+    ):
+        with column:
+            st.image(
+                player_image_url(player["PLAYER_ID"]),
+                width=90
+            )
+
+            st.write(
+                player["PLAYER_NAME"]
+            )
 
 st.subheader("New Additions")
 incoming_columns = st.columns(len(incoming_names))
