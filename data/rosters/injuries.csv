@@ -1,12 +1,73 @@
-PLAYER_ID,PLAYER_NAME,STATUS,INJURY,EXPECTED_RETURN,REPORT_DATE,NOTE
-1627734,Domantas Sabonis,Monitoring,Knee,Preparing for 2026-27,2026-09-02,Did not participate in Lithuania's latest FIBA World Cup qualifying window
-203507,Giannis Antetokounmpo,Monitoring,Knee,Preparing for 2026-27,2026-09-02,Did not participate in Greece's latest FIBA World Cup qualifying window
-1630532,Franz Wagner,Monitoring,Calf,Preparing for 2026-27,2026-09-02,Did not participate in Germany's latest FIBA World Cup qualifying window
-1641757,Jordan Miller,Out,Shoulder - torn left rotator cuff,Re-evaluation in approximately 6 months,2026-08-26,Underwent surgery to repair a torn left rotator cuff
-1641706,Brandon Miller,Recovering,Shoulder,Nearing return,2026-08-25,Provided an update on his shoulder rehabilitation
-1631101,Shaedon Sharpe,Out,Right knee - torn meniscus,Approximately 6 months,2026-08-24,Suffered a torn meniscus in his right knee
-202710,Jimmy Butler III,Recovering,Knee,TBD,2026-08-24,Still in relatively early stages of recovery and recently began getting back on the court
-1630583,Santi Aldama,Recovering,Knee,Expected ready for training camp,2026-08-19,Expected to be ready in time for training camp
-1628392,Isaiah Hartenstein,Monitoring,Ankle,TBD,2026-08-18,Will not play for Germany during the summer FIBA World Cup Qualifiers
-1629029,Luka Dončić,Healthy,Hamstring,Fully healthy,2026-08-03,Recently stated that he is 100 percent healthy again
-1642364,Jamir Watkins,Out,Knee - torn ACL,TBD,2026-07-30,Underwent surgery for a torn ACL
+PLAYER_NAME,STATUS,INJURY,EXPECTED_RETURN,REPORT_DATE,NOTE,PLAYER_ID
+Mouhamed Gueye,Doubtful,Fractured left foot,Oct 15,2026-07-18,Underwent surgery to repair fractured left foot,1631243
+Keshon Gilbert,Doubtful,Hip,Oct 1,2026-07-18,Won't play in Summer League due to hip issue,1642933
+RayJ Dennis,Doubtful,Achilles,Oct 1,2026-07-18,Ruled out for Summer League game,1642484
+Jayson Tatum,Doubtful,Knee,Oct 1,2026-07-27,Expected to be centerpiece of offense after roster changes,1628369
+Nolan Traore,Doubtful,Right knee surgery,Oct 1,2026-06-30,Underwent right knee surgery; out for Summer League,1642849
+Brandon Miller,Doubtful,Shoulder,Oct 1,2026-08-25,Provided update on rehab after shoulder surgery,1641706
+PJ Hall,Out,Fractured right ankle,Oct 1,2026-06-16,Underwent procedure; out for remainder of season,1641790
+Dailyn Swain,Doubtful,Right wrist soreness,Oct 1,2026-07-17,Out for Summer League game due to wrist soreness,1643517
+Zach Collins,Doubtful,Toe,Oct 1,2026-06-30,Agreed to two-year extension; recovering from toe issue,1628380
+Josh Giddey,Doubtful,Ankle,Oct 1,2026-06-24,Recovering; could benefit from roster additions,1630581
+Rob Dillingham,Doubtful,Right wrist cyst removal,Oct 1,2026-06-16,Underwent minor surgery to remove ganglion cyst,1642265
+Santi Aldama,Doubtful,Knee,Oct 1,2026-08-19,Expected ready for training camp,1630583
+Kyrie Irving,Doubtful,Knee,Oct 1,2026-07-27,Expected fully healthy by end of offseason,202681
+Dereck Lively II,Doubtful,Foot,Oct 1,2026-06-26,Has not progressed to running yet,1641726
+Aaron Gordon,Doubtful,Calf,Oct 1,2026-08-20,Could see more usage after roster changes,203932
+Trevon Brazile,Doubtful,Undisclosed,Oct 1,2026-07-19,Out for Summer League finale,1642350
+Jimmy Butler III,Out,Knee,Dec 1,2026-08-24,Early stages of recovery; recently began on-court work,202710
+Moses Moody,Out,Torn patellar tendon,Dec 1,2026-03-24,Diagnosed with torn patellar tendon,1630541
+Kevin Durant,Doubtful,Ankle,Oct 1,2026-08-05,Averaged 26 PPG; continued climbing scoring lists,201142
+Fred VanVleet,Doubtful,Knee,Oct 1,2026-06-29,Exercised player option,1627832
+Steven Adams,Doubtful,Left ankle surgery,Oct 1,2026-06-16,Underwent season-ending ankle surgery,203500
+Tyrese Haliburton,Doubtful,Unknown,Oct 1,2026-06-27,Reported feeling great,1630169
+Johnny Furphy,Out,Torn right ACL,Jan 1,2026-02-09,Diagnosed with torn ACL; out for season,1642277
+Jordan Miller,Out,Torn left rotator cuff,Mar 1,2026-08-26,Underwent surgery; re-evaluation in six months,1641757
+Bradley Beal,Doubtful,Hip,Oct 1,2026-08-13,Signed two-year contract with Clippers,203078
+Yanic Konan Niederhauser,Doubtful,Lisfranc injury,Oct 1,2026-06-16,Requires surgery; out for season,NA
+Scotty Pippen Jr.,Doubtful,Toe,Oct 1,2026-07-27,Chance to start after roster changes,1630590
+Walter Clayton Jr.,Doubtful,Knee,Oct 1,2026-07-19,Out for Summer League title game,1642383
+Karim Lopez,Doubtful,Undisclosed,Oct 1,2026-07-19,Out for Summer League championship,1643510
+Richie Saunders,Out,Unknown,Dec 1,2026-06-24,Selected No. 32 in 2026 NBA Draft,1643563
+Jaylen Wells,Doubtful,Toe,Oct 1,2026-06-24,Competing for rotation minutes,1642377
+Zach Edey,Doubtful,Ankle/elbow,Oct 1,2026-06-24,Role more intriguing after roster additions,1641744
+Giannis Antetokounmpo,Doubtful,Knee,Oct 1,2026-09-02,Did not participate in Greece’s qualifying window,203507
+Bam Adebayo,Doubtful,Back,Oct 1,2026-07-28,Fantasy outlook strong; role may shift,1628389
+Trevor Keels,Doubtful,Knee,Oct 1,2026-07-17,Did not play in Summer League game,1631211
+Ryan Conwell,Doubtful,Hip,Oct 1,2026-07-15,Out for remainder of Summer League,1643553
+Myron Gardner,Doubtful,Ankle,Oct 1,2026-07-08,Out for Summer League,1642066
+Kevin Porter Jr.,Doubtful,Unknown,Oct 1,2026-06-25,Exercised player option,1629645
+Donte DiVincenzo,Out,Ruptured right Achilles,Apr 1,2026-04-26,Underwent surgery for ruptured Achilles,1628978
+Micah Peavy,Doubtful,Rest,Oct 1,2026-07-18,Did not play due to rest,1642877
+Bryce McGowens,Doubtful,Toe,Oct 1,2026-06-16,Out for Summer League game,1631121
+Mohamed Diawara,Doubtful,Finger,Oct 1,2026-07-17,Did not play in Summer League loss,1642885
+Jalen Brunson,Doubtful,Right wrist/forearm surgery,Oct 1,2026-07-07,Expected to require two months of rehab,1628973
+Isaiah Hartenstein,Doubtful,Ankle,Oct 1,2026-08-18,Won't play for Germany in qualifiers,1628392
+Ajay Mitchell,Doubtful,Unknown,Oct 1,2026-07-30,Backcourt opportunities increased after roster changes,1642349
+Otega Oweh,Doubtful,Lower leg,Oct 1,2026-07-19,Did not play in Summer League loss,1642923
+Thomas Sorber,Doubtful,Right knee arthroscopy,Oct 1,2026-07-01,Expected return to full activities in four weeks,1642850
+Jalen Williams,Doubtful,Hamstring,Oct 1,2026-06-16,Ruled out for Game 7 of WCF,1631114
+Nikola Topic,Doubtful,Back surgery,Oct 1,2026-06-16,Expected ready for training camp,NA
+Izaiyah Nelson,Doubtful,Fractured left ankle,Nov 1,2026-07-13,Undergoing surgery; expected return in 3–4 months,1643593
+Jonathan Isaac,Doubtful,Knee,Oct 1,2026-07-01,Returning on one-year deal,1628371
+Kentavious Caldwell-Pope,Doubtful,Finger,Oct 1,2026-07-25,Signed with 76ers after buyout,203484
+CJ Huntley,Doubtful,Hamstring,Oct 1,2026-07-18,Out for Summer League finale,1643047
+Mark Williams,Doubtful,Foot,Oct 1,2026-06-25,Plans to sign three-year contract,1631109
+Shaedon Sharpe,Out,Torn meniscus,Mar 1,2026-08-24,Expected to miss six months,1631101
+Ja Morant,Doubtful,Elbow,Oct 1,2026-06-29,Traded to Portland,1629630
+Damian Lillard,Doubtful,Achilles,Oct 1,2026-06-16,Won 2026 3-Point Contest,203081
+Keegan Murray,Doubtful,Ankle,Oct 1,2026-07-31,Projected starter at PF,1631099
+Zach LaVine,Doubtful,Hand,Oct 1,2026-06-29,Exercised player option,203897
+De'Andre Hunter,Doubtful,Eye,Oct 1,2026-06-25,Competition for usage after draft,1629631
+David Jones Garcia,Doubtful,Ankle,Oct 1,2026-07-22,Signed two-way contract,1642357
+Jayden Quaintance,Out,Right knee surgery,Dec 1,2026-07-19,No timetable for return,1643519
+Nate Bittle,Doubtful,Right knee soreness,Oct 1,2026-07-19,Out for Summer League game,1642927
+Alijah Martin,Doubtful,Knee,Oct 1,2026-07-19,Out for Summer League game,1642918
+Chucky Hepburn,Doubtful,Knee,Oct 1,2026-07-19,Out for Summer League game,1642935
+Collin Murray-Boyles,Doubtful,Finger,Oct 1,2026-07-19,Out for Summer League game,1642867
+Immanuel Quickley,Doubtful,Hamstring,Oct 1,2026-06-16,Out for remainder of first-round series,1630193
+Trey Alexander,Doubtful,Rib,Oct 1,2026-07-17,Out for Summer League game,1641725
+Jaren Jackson Jr.,Doubtful,Knee,Oct 1,2026-06-24,Gains another offensive creator after draft,1628991
+Alex Sarr,Doubtful,Foot,Oct 1,2026-06-24,Role likely unchanged after draft,1642259
+Anthony Davis,Doubtful,Unknown,Oct 1,2026-06-24,Added high-usage scorer to roster,203076
+Trae Young,Doubtful,Quadriceps,Oct 1,2026-06-22,Plans to sign four-year $212M deal,1629027

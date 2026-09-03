@@ -201,10 +201,10 @@ team_lineup["PLAYER_IMAGE"] = team_lineup["PLAYER_ID"].apply(
 team_lineup = team_lineup.merge(
     injuries[
         [
-            "PLAYER_ID",
             "STATUS",
             "INJURY",
-            "EXPECTED_RETURN"
+            "EXPECTED_RETURN",
+            "PLAYER_ID"
         ]
     ],
     on="PLAYER_ID",

@@ -1029,13 +1029,14 @@ class PredictorV5:
             on="PLAYER_ID",
             how="left"
         )
+        
+        injuries = pandas.read_csv("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\injuries.csv")
 
-        future_roster.to_csv("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\future_roster.csv", index=False)
-
+        injuries = injuries.merge(future_roster[["PLAYER_ID", "PLAYER_NAME"]], on = "PLAYER_NAME", how = "left")
+        injuries.to_csv("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\injuries.csv", index = False)
+        
 predictor = PredictorV5()
 result, hist_data = predictor.predict_season("2023-24")
 
-#future_predictions = predictor.train_final_model(hist_data)
-
-predictor._2027_roster()
+future_predictions = predictor.train_final_model(hist_data)
 
