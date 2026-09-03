@@ -5,4 +5,4 @@ showSidebarNavigation = false
 runOnSave = true
 
 [theme]
-primaryColor = "#D32F2F"
+base = "dark"
