@@ -5,12 +5,12 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-player_feature_history = pd.read_csv(BASE_DIR / "gear3" / "data" / "features" / "player_feature_history.csv")
-predictions = pd.read_csv(BASE_DIR / "gear3" / "data" / "display" / "engine_display_file.csv")
-roster_changes = pd.read_csv(BASE_DIR / "gear3" / "data" / "rosters" / "2025-26_to_2026-27_roster_changes.csv")
-old_roster = pd.read_csv(BASE_DIR / "gear3" / "data" / "rosters" / "2025-26_roster.csv")
-future_roster = pd.read_csv(BASE_DIR / "gear3" / "data" / "rosters" / "2026-27_rosters.csv")
-injuries = pd.read_csv(BASE_DIR / "gear3" / "data" / "rosters" / "injuries.csv")
+player_feature_history = pd.read_csv(BASE_DIR / "data" / "features" / "player_feature_history.csv")
+predictions = pd.read_csv(BASE_DIR / "data" / "display" / "engine_display_file.csv")
+roster_changes = pd.read_csv(BASE_DIR / "data" / "rosters" / "2025-26_to_2026-27_roster_changes.csv")
+old_roster = pd.read_csv(BASE_DIR / "data" / "rosters" / "2025-26_roster.csv")
+future_roster = pd.read_csv(BASE_DIR / "data" / "rosters" / "2026-27_rosters.csv")
+injuries = pd.read_csv(BASE_DIR / "data" / "rosters" / "injuries.csv")
 
 def player_image_url(player_id):
     return (

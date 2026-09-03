@@ -5,11 +5,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 injuries = pd.read_csv(
-    BASE_DIR / "gear3" / "data" / "rosters" / "injuries.csv"
+    BASE_DIR / "data" / "rosters" / "injuries.csv"
 )
 
 future_roster = pd.read_csv(
-    BASE_DIR / "gear3" / "data" / "rosters" / "2026-27_rosters.csv"
+    BASE_DIR / "data" / "rosters" / "2026-27_rosters.csv"
 )
 
 injuries = injuries.merge(future_roster[["POSITION", "PLAYER_ID"]], on = "PLAYER_ID", how = "left")
