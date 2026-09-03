@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import time
+from pathlib import Path
 
 st.set_page_config(
     page_title="NBA Prophet",
@@ -209,8 +210,10 @@ def display_conference(conference, conference_name):
         confi_col.write(team["ROSTER_CONFIDENCE"])
         sens_col.write(team["ROSTER_SENSITIVITY"])
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 predictions = pd.read_csv(
-    r"data\display\engine_display_file.csv"
+    BASE_DIR / "data" / "display" / "engine_display_file.csv"
 )
 
 predictions = predictions.sort_values(
