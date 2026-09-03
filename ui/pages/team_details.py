@@ -398,8 +398,9 @@ with efficiency_col:
 
     st.metric(
         "TS_PCT",
-        f"{efficiency_leader['TS_PCT'] * 100}%"
+        f"{efficiency_leader['TS_PCT'] * 100:.1f}%"
     )
+
 
 with availability_col:
     st.subheader("Availability")
