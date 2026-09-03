@@ -210,7 +210,7 @@ def display_conference(conference, conference_name):
         sens_col.write(team["ROSTER_SENSITIVITY"])
 
 predictions = pd.read_csv(
-    "C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\display\\engine_display_file.csv"
+    r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\gear3\data\display\engine_display_file.csv"
 )
 
 predictions = predictions.sort_values(
