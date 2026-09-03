@@ -146,7 +146,7 @@ else:
         <div style="text-align: center;">
             <h1>Welcome to NBA Prophet</h1>
             <h2>The best prediction engine for the NBA</h2>
-            <h2>2026–27 Season Predictions</h2>
+            <h2>2026–27 Regular Season Predictions</h2>
         </div>
         """,
         unsafe_allow_html=True
