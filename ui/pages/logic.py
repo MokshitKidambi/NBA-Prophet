@@ -5,6 +5,18 @@ st.set_page_config(
     layout="wide"
 )
 
+st.markdown("""
+<style>
+    [data-testid="stSidebar"] {
+        display: none;
+    }
+
+    [data-testid="stSidebarCollapsedControl"] {
+        display: none;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("How NBA Prophet Works")
 
 st.markdown("*Developed by Mokshit Kidambi*")

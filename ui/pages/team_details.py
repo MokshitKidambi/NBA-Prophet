@@ -12,6 +12,18 @@ old_roster = pd.read_csv(BASE_DIR / "data" / "rosters" / "2025-26_roster.csv")
 future_roster = pd.read_csv(BASE_DIR / "data" / "rosters" / "2026-27_rosters.csv")
 injuries = pd.read_csv(BASE_DIR / "data" / "rosters" / "injuries.csv")
 
+st.markdown("""
+<style>
+    [data-testid="stSidebar"] {
+        display: none;
+    }
+
+    [data-testid="stSidebarCollapsedControl"] {
+        display: none;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 def player_image_url(player_id):
     return (
         f"https://cdn.nba.com/headshots/nba/latest/260x190/"

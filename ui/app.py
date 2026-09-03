@@ -25,6 +25,18 @@ def type_text(placeholder, text, tag="h1", speed=0.04):
 
         time.sleep(speed)
 
+st.markdown("""
+<style>
+    [data-testid="stSidebar"] {
+        display: none;
+    }
+
+    [data-testid="stSidebarCollapsedControl"] {
+        display: none;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.markdown(
     """
     <style>

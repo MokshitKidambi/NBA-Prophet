@@ -2,6 +2,18 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 
+st.markdown("""
+<style>
+    [data-testid="stSidebar"] {
+        display: none;
+    }
+
+    [data-testid="stSidebarCollapsedControl"] {
+        display: none;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 injuries = pd.read_csv(
