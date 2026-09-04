@@ -81,3 +81,16 @@ entry_types = entry_types.merge(
             on="PLAYER_ID",
             how="left"
         )
+
+college_players = []
+        international_players = []
+        g_league_players = []
+        draft = drafthistory.DraftHistory(season_year_nullable="2019").get_data_frames()[0]
+        roster_stats = self.roster_stats
+        draft = draft[["PERSON_ID", "PLAYER_NAME", "SEASON", "ORGANIZATION_TYPE"]]
+        
+        draft.rename(columns={"PERSON_ID": "PLAYER_ID"},inplace=True)
+        
+        for index, row in draft.iterrows():
+            if row["ORGANIZATION_TYPE"] == "College/University":
+                college_players.append(row)
