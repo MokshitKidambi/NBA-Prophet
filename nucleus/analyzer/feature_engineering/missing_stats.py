@@ -1,41 +1,14 @@
 import pandas as pd
 from pathlib import Path
-from nba_api.stats.endpoints import commonteamroster
-import time
 
 class MissingStats:
     def __init__(self):
         self.player_feature_history_path = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\features\\player_feature_history.csv")
         self.future_roster_path = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear4\\data\\rosters\\2026-27_rosters.csv")
-        
+                
     def stats_tracker(self):        
         player_feature_history = pd.read_csv(self.player_feature_history_path)
         future_roster = pd.read_csv(self.future_roster_path)
-        
-        team_ids = future_roster["TEAM_ID"].unique()
-        
-        all_rosters = []
-
-        for team_id in team_ids:
-            try:
-                team_roster = commonteamroster.CommonTeamRoster(
-                    team_id=team_id,
-                    season="2026-27",
-                    timeout=60
-                ).get_data_frames()[0]
-
-                all_rosters.append(team_roster)
-
-                time.sleep(1)
-
-            except Exception as e:
-                print("Failed:", team_id, e)
-            
-        all_team_rosters = pd.concat(all_rosters, ignore_index = True)
-        
-        all_team_rosters = all_team_rosters[["PLAYER_ID", "EXP"]]
-        
-        all_team_rosters = all_team_rosters.drop_duplicates(subset="PLAYER_ID")
         
         current_stats = player_feature_history[player_feature_history["SEASON"] == "2025-26"]
         
@@ -43,18 +16,14 @@ class MissingStats:
         
         missing_stats = []
         
-        no_player_history = []        
-        
-        roster_stats = roster_stats.merge(all_team_rosters[["PLAYER_ID", "EXP"]], on = "PLAYER_ID", how = "left")
-        
+        no_player_history = []   
+                
         for index, row in roster_stats.iterrows():
             if row["GP"] == 0 or pd.isna(row["GP"]):
                 player_history = player_feature_history[player_feature_history["PLAYER_ID"] == row["PLAYER_ID"]]
                 if player_history.empty:
                     no_player_history.append(row)
                     roster_stats.loc[index, "STATUS"] = "NO_HISTORY"
-                    if row["EXP"] == "R":
-                        roster_stats.loc[index, "ENTRY_TYPE"] = "ROOKIE"
                     continue
                 player_history = player_history.sort_values(by = "SEASON", ascending = False)
                 for new_index, new_row in player_history.iterrows():
@@ -84,19 +53,26 @@ class MissingStats:
                 total_missing_stats.loc[other_index, "STATUS"] = "STALE"
                 total_missing_stats.loc[other_index, "USE_FALLBACK"] = False
         
-        no_history_players = pd.DataFrame(no_player_history)
-        
-        unclassified = roster_stats[(roster_stats["STATUS"] == "NO_HISTORY") &(roster_stats["ENTRY_TYPE"].isna())]
+        # no_history_players = pd.DataFrame(no_player_history)
 
-        print(
-            roster_stats[
-                roster_stats["STATUS"] == "NO_HISTORY"
-            ]["ENTRY_TYPE"].value_counts(dropna=False)
-        )
+        # no_history_players = no_history_players[
+        #     [
+        #         "TEAM_ID_x",
+        #         "PLAYER_ID",
+        #         "PLAYER_NAME_x"
+        #     ]
+        # ]
+
+        # no_history_players.to_csv("rookies.csv", index=False)
         
+        entry_types = pd.read_csv("rookies.csv")
+        
+        entry_types.loc[entry_types["ROOKIE_SOURCE"] == "OTHER", "ROOKIE_SOURCE"] = "G-LEAGUE"
+        
+        entry_types.to_csv("rookies.csv", index = False)
+        
+                                        
 missing_stats = MissingStats()
 
 missing_stats.stats_tracker()
             
-                
-        

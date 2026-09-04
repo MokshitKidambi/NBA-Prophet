@@ -37,3 +37,47 @@ MISSING STATS NOTES:
     RECENT → usable fallback
     AGING  → usable, but lower confidence
     STALE  → flag for special handling
+
+merged = entry_types.merge(
+            ncaa_stats[
+                [
+                    "PLAYER_ID",
+                    "SEASON",
+                    "GP",
+                    "TOTAL_MINS",
+                    "PTS",
+                    "REB",
+                    "AST",
+                    "MPG",
+                    "PPG",
+                    "TS_PCT",
+                    "USG_PCT",
+                ]
+            ],
+            on="PLAYER_ID",
+            how="left"
+        )        
+
+merged.to_csv("rookies.csv", index = False) 
+entry_types = pd.read_csv("rookies.csv")
+print(entry_types.columns)
+ncaa_stats = pd.read_csv("ncaa_rookie_stats.csv") 
+
+entry_types = entry_types.merge(
+            ncaa_stats[
+                [
+                    "PLAYER_ID",
+                    "GP",
+                    "TOTAL_MINS",
+                    "PTS",
+                    "REB",
+                    "AST",
+                    "MPG",
+                    "PPG",
+                    "TS_PCT",
+                    "USG_PCT"
+                ]
+            ],
+            on="PLAYER_ID",
+            how="left"
+        )
