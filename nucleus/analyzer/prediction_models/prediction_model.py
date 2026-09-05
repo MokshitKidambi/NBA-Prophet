@@ -6,7 +6,7 @@ from sklearn.metrics import mean_absolute_error
 from nba_api.stats.endpoints import commonallplayers
 from nba_api.stats.endpoints import playerindex
 
-class PredictorV5:
+class PredictorV3:
     def __init__(self):
         self.X = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV", "RETURNING_SCORING_SHARE"]
         self.dummyX = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV", "RETURNING_SCORING_SHARE"]
@@ -168,6 +168,13 @@ class PredictorV5:
                 (player_feature_history["SEASON"] == SEASON) &
                 (player_feature_history["PLAYER_ID"].isin(incoming_players))
             ]
+            
+            incoming_with_stats = set(incoming_stats["PLAYER_ID"])
+            incoming_without_stats = incoming_players - incoming_with_stats
+
+            roster_changes.loc[index, "INCOMING_COUNT"] = len(incoming_players)
+            roster_changes.loc[index, "INCOMING_WITH_STATS"] = len(incoming_with_stats)
+            roster_changes.loc[index, "INCOMING_WITHOUT_STATS"] = len(incoming_without_stats)
 
             team_stats = training_ground[(training_ground["FEATURE_SEASON"] == SEASON) & (training_ground["TEAM_ID"] == TEAM_ID)]
             target_team_stats = training_ground[(training_ground["FEATURE_SEASON"] == TARGET_SEASON) & (training_ground["TEAM_ID"] == TEAM_ID)]
@@ -318,6 +325,24 @@ class PredictorV5:
             roster_changes.loc[index, "CORE_WEIGHTED_AVAILABILITY"] = core_weighted_availability
             roster_changes.loc[index, "CORE_AVAILABILITY_STD_DEV"] = core_availability_std_dev
 
+        coverage = (
+            roster_changes
+            .groupby("OLD_SEASON")[
+                [
+                    "INCOMING_COUNT",
+                    "INCOMING_WITH_STATS",
+                    "INCOMING_WITHOUT_STATS"
+                ]
+            ]
+            .sum()
+        )
+
+        coverage["COVERAGE"] = (
+            coverage["INCOMING_WITH_STATS"]
+            / coverage["INCOMING_COUNT"]
+        )
+
+        print(coverage)
                
         roster_changes["NET_PPG_CHANGE"] = roster_changes["INCOMING_PPG"] - roster_changes["OUTGOING_PPG"]
         
@@ -731,8 +756,10 @@ class PredictorV5:
         return future_data
 
     def build_future_roster_features(self):
+        result, hist_data = self.predict_season("2023-24")
         training_ground = pandas.read_csv(self.team_training_ground_path)
         player_feature_history = pandas.read_csv(self.player_feature_history)
+        future_roster_stats = pandas.read_csv("roster_stats_model_ready.csv")
 
         players = commonallplayers.CommonAllPlayers(
             is_only_current_season=1,
@@ -802,6 +829,35 @@ class PredictorV5:
         player_feature_history["PLUS_MINUS_LOAD"] = (
             player_feature_history["PLUS_MINUS"] * player_feature_history["MPG"]
         )
+        
+        future_roster_stats["SCORING_LOAD"] = (
+            future_roster_stats["MODEL_PPG"] *
+            future_roster_stats["MODEL_MPG"]
+        )
+
+        future_roster_stats["EFFICIENCY_LOAD"] = (
+            future_roster_stats["MODEL_TS_PCT"] *
+            future_roster_stats["MODEL_MPG"]
+        )
+
+        future_roster_stats["USAGE_LOAD"] = (
+            future_roster_stats["MODEL_USG_PCT"] *
+            future_roster_stats["MODEL_MPG"]
+        )
+        
+        future_roster_stats["PLUS_MINUS_LOAD"] = (
+            future_roster_stats["PLUS_MINUS"].fillna(0)
+            * future_roster_stats["MODEL_MPG"]
+        )
+        
+        future_roster_stats.rename(
+            columns={
+                "TEAM_ID_x": "TEAM_ID",
+                "PLAYER_NAME_x": "PLAYER_NAME",
+                "SEASON_x": "SEASON"
+            },
+            inplace=True
+        )
 
         for index, row in roster_changes.iterrows():
         
@@ -823,11 +879,11 @@ class PredictorV5:
                         (player_feature_history["PLAYER_ID"].isin(returning_players))
                     ]
         
-                    incoming_stats = player_feature_history[
-                        (player_feature_history["SEASON"] == SEASON) &
-                        (player_feature_history["PLAYER_ID"].isin(incoming_players))
+                    incoming_stats = future_roster_stats[
+                        (future_roster_stats["TEAM_ID"] == TEAM_ID) &
+                        (future_roster_stats["PLAYER_ID"].isin(incoming_players))
                     ]
-        
+                            
                     team_stats = training_ground[(training_ground["FEATURE_SEASON"] == SEASON) & (training_ground["TEAM_ID"] == TEAM_ID)]
                     old_team_stats = player_feature_history[(player_feature_history["SEASON"] == SEASON) & (player_feature_history["TEAM_ID"] == TEAM_ID)]
         
@@ -867,7 +923,7 @@ class PredictorV5:
                     returning_usage_load = returning_stats["USAGE_LOAD"].sum()
                     roster_changes.loc[index, "RETURNING_USAGE_LOAD"] = returning_usage_load
         
-                    incoming_ppg = incoming_stats["PPG"].sum()
+                    incoming_ppg = incoming_stats["MODEL_PPG"].sum()
                     incoming_total_mins = incoming_stats["TOTAL_MINS"].sum()
         
                     roster_changes.loc[index, "INCOMING_PPG"] = incoming_ppg
@@ -945,6 +1001,8 @@ class PredictorV5:
             ]],
             on="TEAM_ID", how="left", validate="one_to_one"
         )
+        
+        
 
         future_data["INCOMING_STAT_COVERAGE"] = (
             future_data["INCOMING_WITH_STATS"] /
@@ -1035,8 +1093,9 @@ class PredictorV5:
         injuries = injuries.merge(future_roster[["PLAYER_ID", "PLAYER_NAME"]], on = "PLAYER_NAME", how = "left")
         injuries.to_csv("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\injuries.csv", index = False)
         
-predictor = PredictorV5()
-result, hist_data = predictor.predict_season("2023-24")
+predictor = PredictorV3()
+#result, hist_data = predictor.predict_season("2023-24")
 
-future_predictions = predictor.train_final_model(hist_data)
+#future_predictions = predictor.train_final_model(hist_data)
 
+predictor.predict_season("2023-24")
