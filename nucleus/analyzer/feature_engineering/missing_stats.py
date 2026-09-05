@@ -3,7 +3,6 @@ import os
 import requests
 from pathlib import Path
 from nba_api.stats.endpoints import drafthistory
-from sklearn.linear_model import LinearRegression
 
 class MissingStats:
     def __init__(self):
@@ -14,6 +13,21 @@ class MissingStats:
         
         self.MPG_X = ["PRE_NBA_MPG"]
         self.MPG_Y = ["FIRST_VALUABLE_NBA_MPG"]
+        
+        self.PPG_X = ["PRE_NBA_PPG"]
+        self.PPG_Y = ["FIRST_VALUABLE_NBA_PPG"]
+        
+        self.RPG_X = ["PRE_NBA_RPG"]
+        self.MRPG_Y = ["FIRST_VALUABLE_NBA_RPG"]
+                
+        self.APG_X = ["PRE_NBA_APG"]
+        self.APG_Y = ["FIRST_VALUABLE_NBA_APG"]
+                        
+        self.TS_PCT_X = ["PRE_NBA_TS_PCT"]
+        self.TS_PCT_Y = ["FIRST_VALUABLE_NBA_TS_PCT"]
+                                
+        self.USG_PCT_X = ["PRE_NBA_USG_PCT"]
+        self.USG_PCT_Y = ["FIRST_VALUABLE_NBA_USG_PCT"]
 
                 
     def stats_tracker(self):
@@ -121,7 +135,7 @@ class MissingStats:
         other_org_players = []
         high_school_and_blank_players = []
         combo_draft = []
-        for year in range (2018, 2020):
+        for year in range (2017, 2025):
             draft = drafthistory.DraftHistory(season_year_nullable = str(year)).get_data_frames()[0]
             combo_draft.append(draft)
         
@@ -281,7 +295,7 @@ class MissingStats:
 
         ncaa_transitions[cols_to_round] = ncaa_transitions[cols_to_round].round(1)
         
-        #ncaa_transitions.to_csv("ncaa_transitions.csv", index = False)
+        ncaa_transitions.to_csv("ncaa_transitions.csv", index = False)
         
         g_inter_transitions = g_inter_transitions[
             [
@@ -312,7 +326,7 @@ class MissingStats:
 
         g_inter_transitions[cols_to_round] = g_inter_transitions[cols_to_round].round(1)
         
-        #g_inter_transitions.to_csv("g_inter_transitions.csv", index = False)       
+        g_inter_transitions.to_csv("g_inter_transitions.csv", index = False)       
          
     def collect_preNBA_stats(self):
         cbbd_api = os.environ["CBBD_API_KEY"]
@@ -323,7 +337,7 @@ class MissingStats:
         
         college_stat_list = []
         
-        for year in range(2018, 2020):
+        for year in range(2017, 2025):
             for attempt in range(3):
                 try:
                     response = requests.get(url, headers = headers, params = {"season": year}, timeout=60)
@@ -397,7 +411,7 @@ class MissingStats:
         
     def track_preNBA_stats(self):
         ncaa_transitions = pd.read_csv("ncaa_transitions.csv")
-        ncaa_stat_list = pd.read_csv("ncaa_stat_list_2017.csv")
+        ncaa_stat_list = pd.read_csv("ncaa_stat_list.csv")
         
         name_aliases = {"Omari Spellman": "Omari Rasulala Spellman"}
         ncaa_transitions["PRE_NBA_SEASON"] = ncaa_transitions["DRAFT_YEAR"]
@@ -460,64 +474,9 @@ class MissingStats:
             ]
         ].copy()
         
-        #matched.to_csv("ncaa_translation_sample.csv", index = False)
-        
-    def translating_NCAA_to_NBA_stats(self):
-        matched = pd.read_csv(self.ncaa_translation_path)
-        
-        ratios = {
-            "MPG": 0.659,
-            "PPG": 0.543,
-            "RPG": 0.570,
-            "APG": 0.603,
-            "TS_PCT": 0.896,
-            "USG_PCT": 0.711
-        }
-
-        for stat, ratio in ratios.items():
-
-            matched[f"RATIO_PRED_{stat}"] = (
-                matched[f"PRE_NBA_{stat}"] * ratio
-            )
-
-            mae = (
-                matched[f"RATIO_PRED_{stat}"]
-                - matched[f"FIRST_VALUABLE_NBA_{stat}"]
-            ).abs().mean()
-
-            #print(stat, "MAE:", round(mae, 3))
-            
-        stats = ["MPG", "PPG", "RPG", "APG", "TS_PCT", "USG_PCT"]
-
-        for stat in stats:
-
-            nba_mean = matched[f"FIRST_VALUABLE_NBA_{stat}"].mean()
-
-            naive_mae = (
-                matched[f"FIRST_VALUABLE_NBA_{stat}"] - nba_mean
-            ).abs().mean()
-
-            print(stat, "NAIVE MAE:", round(naive_mae, 3)) 
-        
-        X_data = matched[self.X]
-        Y_data = matched[self.Y]
-        season_data = matched["DRAFT_YEAR"]
-         
-        train_mask = season_data < 2020
-        test_mask = season_data == 2020
-         
-        X_train = X_data[train_mask]
-        Y_train = Y_data[train_mask]
-         
-        X_test = X_data[test_mask]
-        Y_test = Y_data[test_mask]
-            
-        model = LinearRegression() 
-        
-        model.fit(X_train, Y_train)
-        
-        test_info = matched.loc[test_mask, ["PLAYER_ID", "PLAYER_NAME", "DRAFT_YEAR"]].copy()        
+        matched.to_csv("ncaa_translation_sample.csv", index = False)
+                
 missing_stats = MissingStats()
 
-missing_stats.translating_NCAA_to_NBA_stats()
+missing_stats.track_preNBA_stats()
             
