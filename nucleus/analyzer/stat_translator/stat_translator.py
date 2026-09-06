@@ -196,7 +196,129 @@ class StatTranslator:
                 ].describe()
             )
             
-            rookies.to_csv("rookies_translated.csv", index = False)            
+            rookies.to_csv("rookies_translated.csv", index = False)
+    
+    def oof(self, test_year):
+
+        matched = pd.read_csv(self.path)
+
+        matched = matched[
+            matched["DRAFT_YEAR"].isin(self.draft_years)
+        ].copy()
+
+        matched = matched.drop_duplicates().reset_index(drop=True)
+        
+        if self.path == "ncaa_translation_sample.csv":
+            preferred_ppg = {
+                1630182: 12.0,   # Josh Green
+                1630552: 11.2,   # Jalen Johnson
+                1630595: 20.1,   # Cade Cunningham
+                1631114: 18.0,   # Jalen Williams
+                1631119: 10.9,   # Jaylin Williams
+                1641794: 20.8,   # Dillon Jones
+            }
+
+            for player_id, correct_ppg in preferred_ppg.items():
+
+                player_mask = matched["PLAYER_ID"] == player_id
+
+                matched = matched[
+                    ~player_mask
+                    | (
+                        player_mask
+                        & np.isclose(
+                            matched["PRE_NBA_PPG"],
+                            correct_ppg
+                        )
+                    )
+                ]
+
+        matched = matched.reset_index(drop=True)
+                
+        problem_players = matched[
+            matched["PLAYER_ID"].duplicated(keep=False)
+        ]
+
+        if not problem_players.empty:
+            print(problem_players[
+                [
+                    "PLAYER_ID",
+                    "PLAYER_NAME",
+                    "DRAFT_YEAR",
+                    "PRE_NBA_MPG",
+                    "PRE_NBA_PPG",
+                    "PRE_NBA_RPG",
+                    "PRE_NBA_APG",
+                    "PRE_NBA_TS_PCT",
+                    "PRE_NBA_USG_PCT",
+                ]
+            ])
+
+            raise ValueError("Resolve duplicate PLAYER_ID rows before OOF")
+        
+        assert not matched["PLAYER_ID"].duplicated().any()
+
+        train_mask = matched["DRAFT_YEAR"].isin(
+            [year for year in self.draft_years if year != test_year]
+        )
+
+        test_mask = matched["DRAFT_YEAR"] == test_year
+
+        held_out = matched.loc[
+            test_mask,
+            ["PLAYER_ID", "DRAFT_YEAR"]
+        ].copy()
+
+        for stat, method in self.methods.items():
+
+            X_col = f"PRE_NBA_{stat}"
+            Y_col = f"FIRST_VALUABLE_NBA_{stat}"
+
+            valid_mask = (
+                matched[X_col].notna()
+                & matched[Y_col].notna()
+            )
+
+            stat_train_mask = train_mask & valid_mask
+            stat_test_mask = test_mask & valid_mask
+
+            X_train = matched.loc[stat_train_mask, [X_col]]
+            Y_train = matched.loc[stat_train_mask, Y_col]
+
+            X_test = matched.loc[stat_test_mask, [X_col]]
+
+            if method == "REGRESSION":
+                model = LinearRegression()
+                model.fit(X_train, Y_train)
+                prediction = model.predict(X_test)
+
+            elif method == "NAIVE":
+                prediction = [Y_train.mean()] * len(X_test)
+
+            elif method == "RATIO":
+                ratio = (
+                    Y_train.mean()
+                    / X_train.iloc[:, 0].mean()
+                )
+
+                prediction = X_test.iloc[:, 0] * ratio
+
+            held_out.loc[
+                X_test.index,
+                f"MODEL_{stat}"
+            ] = prediction
+
+        return held_out                
+    
+    def build_oof_translations(self):
+        results = []
+
+        for year in self.draft_years:
+            held_out = self.oof(year)
+            results.append(held_out)
+
+        return pd.concat(results, ignore_index=True)        
+              
                         
 class NCAATranslator(StatTranslator):
     def __init__(self):
@@ -204,6 +326,14 @@ class NCAATranslator(StatTranslator):
             path="ncaa_translation_sample.csv",
             draft_years=list(range(2018, 2025))
         )
+        self.methods = {
+            "MPG": "NAIVE",
+            "PPG": "REGRESSION",
+            "RPG": "REGRESSION",
+            "APG": "REGRESSION",
+            "TS_PCT": "REGRESSION",
+            "USG_PCT": "REGRESSION",
+        }
 
 class InternationalTranslator(StatTranslator):
     def __init__(self):
@@ -230,6 +360,15 @@ class InternationalTranslator(StatTranslator):
         self.USG_PCT_X = ["PRE_NBA_USG_PCT"]
         self.USG_PCT_Y = ["FIRST_VALUABLE_NBA_USG_PCT"]
         
+        self.methods = {
+            "MPG": "NAIVE",
+            "PPG": "RATIO",
+            "RPG": "REGRESSION",
+            "APG": "REGRESSION",
+            "TS_PCT": "REGRESSION",
+            "USG_PCT": "RATIO",
+        }
+        
 class GLeagueTranslator(StatTranslator):
     def __init__(self):
         super().__init__(
@@ -253,7 +392,16 @@ class GLeagueTranslator(StatTranslator):
         self.TS_PCT_Y = ["FIRST_VALUABLE_NBA_TS_PCT"]
                                 
         self.USG_PCT_X = ["PRE_NBA_USG_PCT"]
-        self.USG_PCT_Y = ["FIRST_VALUABLE_NBA_USG_PCT"]    
+        self.USG_PCT_Y = ["FIRST_VALUABLE_NBA_USG_PCT"] 
+        
+        self.methods = {
+            "MPG": "NAIVE",
+            "PPG": "RATIO",
+            "RPG": "NAIVE",
+            "APG": "RATIO",
+            "TS_PCT": "NAIVE",
+            "USG_PCT": "RATIO",
+        }   
         
 ncaa = NCAATranslator()
 international = InternationalTranslator()

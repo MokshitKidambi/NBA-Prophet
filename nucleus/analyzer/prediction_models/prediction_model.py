@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas
+from contextlib import redirect_stdout
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error
@@ -52,11 +53,17 @@ class PredictorV3:
             "CORE_AVAILABILITY_STD_DEV": "Core Availability Stability",
             "RETURNING_SCORING_SHARE": "Returning Scoring"
         }
+        
+        self.test_seasons = ["2017-18", "2018-19", "2019-20", "2020-21", "2021-22", "2022-23", "2023-24"]
 
-    def predict_season(self, test_season, team_index = 0, explain = False):
-
+    def predict_season(self, test_season, team_index = 0, explain = False, use_oof = False, rookie_weight = 1.0):
+        print("PREDICT_SEASON ROOKIE WEIGHT:", rookie_weight)
+        
         training_ground = pandas.read_csv(self.team_training_ground_path)
         player_feature_history = pandas.read_csv(self.player_feature_history)
+        
+        historical_oof = pandas.read_csv("historical_oof_translated.csv") if use_oof else None
+        
         team_ppg = (player_feature_history.groupby(["TEAM_ID", "SEASON"], as_index=False)["PPG"].sum())
 
         team_ppg.rename(columns={"PPG": "ROSTER_PPG_SUM"}, inplace=True)
@@ -142,6 +149,8 @@ class PredictorV3:
                 })
 
         roster_changes = pandas.DataFrame(roster_changes)
+        
+        hist_missing_incoming = []
 
         for index, row in roster_changes.iterrows():
 
@@ -171,11 +180,85 @@ class PredictorV3:
             
             incoming_with_stats = set(incoming_stats["PLAYER_ID"])
             incoming_without_stats = incoming_players - incoming_with_stats
+            
+            if SEASON >= "2017-18":
 
-            roster_changes.loc[index, "INCOMING_COUNT"] = len(incoming_players)
-            roster_changes.loc[index, "INCOMING_WITH_STATS"] = len(incoming_with_stats)
-            roster_changes.loc[index, "INCOMING_WITHOUT_STATS"] = len(incoming_without_stats)
+                for player_id in incoming_without_stats:
 
+                    target_player = player_feature_history[
+                        (player_feature_history["SEASON"] == TARGET_SEASON) &
+                        (player_feature_history["PLAYER_ID"] == player_id)
+                    ]
+
+                    hist_missing_incoming.append({
+                        "PLAYER_ID": player_id,
+                        "PLAYER_NAME": (
+                            target_player["PLAYER_NAME"].iloc[0]
+                            if not target_player.empty
+                            else "UNKNOWN"
+                        ),
+                        "TEAM_ID": TEAM_ID,
+                        "OLD_SEASON": SEASON,
+                        "NEW_SEASON": TARGET_SEASON,
+                    })
+            
+            fallback_rows = []
+
+            for player_id in incoming_without_stats:
+
+                prior_history = player_feature_history[
+                    (player_feature_history["PLAYER_ID"] == player_id) &
+                    (player_feature_history["SEASON"] < SEASON) &
+                    (player_feature_history["GP"] > 0)
+                ].sort_values("SEASON", ascending=False)
+
+                if not prior_history.empty:
+                    fallback_rows.append(prior_history.iloc[0])
+                    
+            if fallback_rows:
+                fallback_stats = pandas.DataFrame(fallback_rows)
+
+                incoming_stats = pandas.concat(
+                    [incoming_stats, fallback_stats],
+                    ignore_index=True
+                )
+                
+            incoming_with_stats = set(incoming_stats["PLAYER_ID"])
+            incoming_without_stats = incoming_players - incoming_with_stats
+            
+            first_entry_ids = []
+
+            for player_id in incoming_without_stats:
+                prior_history = player_feature_history[
+                    (player_feature_history["PLAYER_ID"] == player_id)
+                    & (player_feature_history["SEASON"] < SEASON)
+                ]
+
+                if prior_history.empty:
+                    first_entry_ids.append(player_id)
+
+            target_draft_year = int(TARGET_SEASON.split("-")[0])
+
+            if use_oof:
+                translated_incoming = historical_oof[historical_oof["PLAYER_ID"].isin(first_entry_ids)].copy()
+                
+                translated_incoming["SCORING_LOAD"] = (
+                    translated_incoming["MODEL_PPG"]
+                    * translated_incoming["MODEL_MPG"]
+                )
+
+                translated_incoming["EFFICIENCY_LOAD"] = (
+                    translated_incoming["MODEL_TS_PCT"]
+                    * translated_incoming["MODEL_MPG"]
+                )
+
+                translated_incoming["USAGE_LOAD"] = (
+                    translated_incoming["MODEL_USG_PCT"]
+                    * translated_incoming["MODEL_MPG"]
+                )
+                
+                translated_incoming["PLUS_MINUS_LOAD"] = 0.0
+            
             team_stats = training_ground[(training_ground["FEATURE_SEASON"] == SEASON) & (training_ground["TEAM_ID"] == TEAM_ID)]
             target_team_stats = training_ground[(training_ground["FEATURE_SEASON"] == TARGET_SEASON) & (training_ground["TEAM_ID"] == TEAM_ID)]
             old_team_stats = player_feature_history[(player_feature_history["SEASON"] == SEASON) & (player_feature_history["TEAM_ID"] == TEAM_ID)]
@@ -217,23 +300,55 @@ class PredictorV3:
             returning_usage_load = returning_stats["USAGE_LOAD"].sum()
             roster_changes.loc[index, "RETURNING_USAGE_LOAD"] = returning_usage_load
 
-            incoming_ppg = incoming_stats["PPG"].sum()
-            incoming_total_mins = incoming_stats["TOTAL_MINS"].sum()
+            if use_oof:                    
+                incoming_ppg = (
+                    incoming_stats["PPG"].sum()
+                    + rookie_weight * translated_incoming["MODEL_PPG"].sum()
+                )
+                incoming_total_mins = incoming_stats["TOTAL_MINS"].sum()
 
-            roster_changes.loc[index, "INCOMING_PPG"] = incoming_ppg
-            roster_changes.loc[index, "INCOMING_TOTAL_MINS"] = incoming_total_mins
+                roster_changes.loc[index, "INCOMING_PPG"] = incoming_ppg
+                roster_changes.loc[index, "INCOMING_TOTAL_MINS"] = incoming_total_mins
 
-            incoming_scoring_load = incoming_stats["SCORING_LOAD"].sum()
-            roster_changes.loc[index, "INCOMING_SCORING_LOAD"] = incoming_scoring_load
+                incoming_scoring_load = incoming_stats["SCORING_LOAD"].sum() + rookie_weight * translated_incoming["SCORING_LOAD"].sum()
+                roster_changes.loc[index, "INCOMING_SCORING_LOAD"] = incoming_scoring_load
 
-            incoming_efficiency_load = incoming_stats["EFFICIENCY_LOAD"].sum()
-            roster_changes.loc[index, "INCOMING_EFFICIENCY_LOAD"] = incoming_efficiency_load
+                incoming_efficiency_load = incoming_stats["EFFICIENCY_LOAD"].sum() + rookie_weight * translated_incoming["EFFICIENCY_LOAD"].sum()
+                roster_changes.loc[index, "INCOMING_EFFICIENCY_LOAD"] = incoming_efficiency_load
 
-            incoming_plus_minus_load = incoming_stats["PLUS_MINUS_LOAD"].sum()
-            roster_changes.loc[index, "INCOMING_PLUS_MINUS_LOAD"] = incoming_plus_minus_load
+                incoming_plus_minus_load = incoming_stats["PLUS_MINUS_LOAD"].sum()
+                roster_changes.loc[index, "INCOMING_PLUS_MINUS_LOAD"] = incoming_plus_minus_load
 
-            incoming_usage_load = incoming_stats["USAGE_LOAD"].sum()
-            roster_changes.loc[index, "INCOMING_USAGE_LOAD"] = incoming_usage_load
+                incoming_usage_load = incoming_stats["USAGE_LOAD"].sum() + rookie_weight * translated_incoming["USAGE_LOAD"].sum()
+                roster_changes.loc[index, "INCOMING_USAGE_LOAD"] = incoming_usage_load
+                
+                incoming_with_stats = (set(incoming_stats["PLAYER_ID"]) | set(translated_incoming["PLAYER_ID"]))
+                incoming_without_stats = (incoming_players - incoming_with_stats)
+            
+            else:
+                incoming_ppg = (
+                    incoming_stats["PPG"].sum()
+                )
+                incoming_total_mins = incoming_stats["TOTAL_MINS"].sum()
+
+                roster_changes.loc[index, "INCOMING_PPG"] = incoming_ppg
+                roster_changes.loc[index, "INCOMING_TOTAL_MINS"] = incoming_total_mins
+
+                incoming_scoring_load = incoming_stats["SCORING_LOAD"].sum()
+                roster_changes.loc[index, "INCOMING_SCORING_LOAD"] = incoming_scoring_load
+
+                incoming_efficiency_load = incoming_stats["EFFICIENCY_LOAD"].sum()
+                roster_changes.loc[index, "INCOMING_EFFICIENCY_LOAD"] = incoming_efficiency_load
+
+                incoming_plus_minus_load = incoming_stats["PLUS_MINUS_LOAD"].sum()
+                roster_changes.loc[index, "INCOMING_PLUS_MINUS_LOAD"] = incoming_plus_minus_load
+
+                incoming_usage_load = incoming_stats["USAGE_LOAD"].sum()
+                roster_changes.loc[index, "INCOMING_USAGE_LOAD"] = incoming_usage_load
+            
+            roster_changes.loc[index, "INCOMING_COUNT"] = len(incoming_players)
+            roster_changes.loc[index, "INCOMING_WITH_STATS"] = len(incoming_with_stats)
+            roster_changes.loc[index, "INCOMING_WITHOUT_STATS"] = len(incoming_without_stats)
 
             old_team_scoring_load = old_team_stats["SCORING_LOAD"].sum()
             old_team_efficiency_load = old_team_stats["EFFICIENCY_LOAD"].sum()
@@ -251,11 +366,9 @@ class PredictorV3:
             team_gp = (team_stats["W"] + team_stats["L"]).iloc[0]
 
             old_team_stats = old_team_stats.copy()
-
             old_team_stats["PLAYER_AVAILABILITY"] = (old_team_stats["GP"] / team_gp)
 
             availability = old_team_stats["GP"] / team_gp
-
             missed_availability = 1 - availability
 
             old_team_stats["WEIGHTED_AVAILABILITY"] = (old_team_stats["PLAYER_AVAILABILITY"] * old_team_stats["TOTAL_MINS"])
@@ -325,6 +438,47 @@ class PredictorV3:
             roster_changes.loc[index, "CORE_WEIGHTED_AVAILABILITY"] = core_weighted_availability
             roster_changes.loc[index, "CORE_AVAILABILITY_STD_DEV"] = core_availability_std_dev
 
+        historical_missing_incoming = pandas.DataFrame(hist_missing_incoming)
+
+        historical_missing_incoming.to_csv(
+            "historical_missing_incoming_2017_onward.csv",
+            index=False
+        )
+        
+        def classify_missing(row):
+            player_history = player_feature_history[
+                player_feature_history["PLAYER_ID"] == row["PLAYER_ID"]
+            ].sort_values("SEASON")
+
+            prior_history = player_history[
+                player_history["SEASON"] < row["OLD_SEASON"]
+            ]
+
+            if prior_history.empty:
+                return "FIRST_NBA_ENTRY"
+
+            return "RETURNING_AFTER_GAP"
+
+
+        historical_missing_incoming["MISSING_TYPE"] = (
+            historical_missing_incoming.apply(
+                classify_missing,
+                axis=1
+            )
+        )
+        
+        print(
+            historical_missing_incoming["MISSING_TYPE"]
+            .value_counts()
+        )
+
+        print(
+            historical_missing_incoming
+            .groupby(["OLD_SEASON", "MISSING_TYPE"])
+            .size()
+            .unstack(fill_value=0)
+        )
+        
         coverage = (
             roster_changes
             .groupby("OLD_SEASON")[
@@ -343,6 +497,19 @@ class PredictorV3:
         )
 
         print(coverage)
+
+        first_entries = historical_missing_incoming[historical_missing_incoming["MISSING_TYPE"] == "FIRST_NBA_ENTRY"].copy()
+        
+        if use_oof:
+            matched = first_entries.merge(
+                historical_oof,
+                on="PLAYER_ID",
+                how="inner"
+            )
+
+            print("Matched occurrences:", len(matched))
+            print("Unique matched players:", matched["PLAYER_ID"].nunique())
+            print(matched["SOURCE"].value_counts())
                
         roster_changes["NET_PPG_CHANGE"] = roster_changes["INCOMING_PPG"] - roster_changes["OUTGOING_PPG"]
         
@@ -499,77 +666,28 @@ class PredictorV3:
         print(f"Simple MAE: {simple_mae}")
         print(f"Simple MAE Wins: {simple_mae * 82}")
 
-        print(hist_data["FEATURE_SEASON"].unique())
-        print(player_feature_history["SEASON"].unique())
-
         return result, hist_data
 
-    def take_all_seasons(self):
-         results = []
-         frontyear = 2017
-         backyear = (frontyear + 1) % 100
+    def take_all_seasons(self, use_oof = False, rookie_weight = 1.0):
 
-         while frontyear != 2024:
-              print(f"RESULTS FOR: {frontyear}-{backyear}")
-              print()
-              result, _ = self.predict_season(f"{frontyear}-{backyear}")
-              results.append(result)
-              print()
-              print()
-              frontyear += 1
-              backyear = (frontyear + 1) % 100
-              continue
+            results = []
 
-         result_comb = pandas.concat(results, ignore_index=True)
+            for season in self.test_seasons:
 
-         print("BIGGEST MISSES")
-         print(
-            result_comb
-            .sort_values("ABSOLUTE_ERROR_82", ascending=False)
-            .head(10)
-        )
+                result, _ = self.predict_season(
+                    season,
+                    use_oof = use_oof,
+                    rookie_weight = rookie_weight
+                )
 
-         print("\nMOST OVERPREDICTED")
-         print(
-            result_comb
-            .sort_values("PREDICTION_ERROR_82", ascending=False)
-            .head(10)
-        )
+                results.append({
+                    "TEST_SEASON": season,
+                    "MAE": result["ABSOLUTE_ERROR_82"].mean() / 82,
+                    "MEDIAN_ERROR_WINS":
+                        result["ABSOLUTE_ERROR_82"].median()
+                })
 
-         print("\nMOST UNDERPREDICTED")
-         print(
-            result_comb
-            .sort_values("PREDICTION_ERROR_82")
-            .head(10)
-        )
-
-         print("\nERROR BY SEASON")
-         print(
-            result_comb
-            .groupby("TARGET_SEASON")["ABSOLUTE_ERROR_82"]
-            .agg(["mean", "median"])
-        )
-
-         result_comb["AVAILABILITY_BUCKET"] = pandas.cut(
-            result_comb["TARGET_OLD_CORE_AVAILABILITY"],
-            bins=[0, 0.35, 0.65, 1.0],
-            labels=["LOW", "MEDIUM", "HIGH"],
-            include_lowest=True
-        )
-
-         print(
-            result_comb.groupby("AVAILABILITY_BUCKET")[
-                "ABSOLUTE_ERROR_82"
-            ].agg(["count", "mean", "median"])
-        )
-
-         error_median = result_comb["ABSOLUTE_ERROR_82"].median()
-         error_75 = result_comb["ABSOLUTE_ERROR_82"].quantile(0.75)
-
-         print("Overall median historical error:", error_median)
-         print("75th percentile historical error:", error_75)
-
-         return result_comb
+            return pandas.DataFrame(results)
 
     def traded_player_check(self):
         player_feature_history = pandas.read_csv(self.player_feature_history)
@@ -883,6 +1001,10 @@ class PredictorV3:
                         (future_roster_stats["TEAM_ID"] == TEAM_ID) &
                         (future_roster_stats["PLAYER_ID"].isin(incoming_players))
                     ]
+                    
+                    model_incoming_stats = incoming_stats[
+                        incoming_stats["STATUS"] != "NO_HISTORY"
+                    ]
                             
                     team_stats = training_ground[(training_ground["FEATURE_SEASON"] == SEASON) & (training_ground["TEAM_ID"] == TEAM_ID)]
                     old_team_stats = player_feature_history[(player_feature_history["SEASON"] == SEASON) & (player_feature_history["TEAM_ID"] == TEAM_ID)]
@@ -923,22 +1045,20 @@ class PredictorV3:
                     returning_usage_load = returning_stats["USAGE_LOAD"].sum()
                     roster_changes.loc[index, "RETURNING_USAGE_LOAD"] = returning_usage_load
         
-                    incoming_ppg = incoming_stats["MODEL_PPG"].sum()
-                    incoming_total_mins = incoming_stats["TOTAL_MINS"].sum()
+                    incoming_ppg = model_incoming_stats["MODEL_PPG"].sum()
+                    incoming_total_mins = model_incoming_stats["TOTAL_MINS"].sum()
+
+                    incoming_scoring_load = model_incoming_stats["SCORING_LOAD"].sum()
+                    incoming_efficiency_load = model_incoming_stats["EFFICIENCY_LOAD"].sum()
+                    incoming_plus_minus_load = model_incoming_stats["PLUS_MINUS_LOAD"].sum()
+                    incoming_usage_load = model_incoming_stats["USAGE_LOAD"].sum()
         
                     roster_changes.loc[index, "INCOMING_PPG"] = incoming_ppg
                     roster_changes.loc[index, "INCOMING_TOTAL_MINS"] = incoming_total_mins
         
-                    incoming_scoring_load = incoming_stats["SCORING_LOAD"].sum()
-                    roster_changes.loc[index, "INCOMING_SCORING_LOAD"] = incoming_scoring_load
-        
-                    incoming_efficiency_load = incoming_stats["EFFICIENCY_LOAD"].sum()
-                    roster_changes.loc[index, "INCOMING_EFFICIENCY_LOAD"] = incoming_efficiency_load
-        
-                    incoming_plus_minus_load = incoming_stats["PLUS_MINUS_LOAD"].sum()
+                    roster_changes.loc[index, "INCOMING_SCORING_LOAD"] = incoming_scoring_load        
+                    roster_changes.loc[index, "INCOMING_EFFICIENCY_LOAD"] = incoming_efficiency_load       
                     roster_changes.loc[index, "INCOMING_PLUS_MINUS_LOAD"] = incoming_plus_minus_load
-        
-                    incoming_usage_load = incoming_stats["USAGE_LOAD"].sum()
                     roster_changes.loc[index, "INCOMING_USAGE_LOAD"] = incoming_usage_load
         
                     old_team_scoring_load = old_team_stats["SCORING_LOAD"].sum()
@@ -965,7 +1085,7 @@ class PredictorV3:
 
                     incoming_with_stats = set(incoming_stats["PLAYER_ID"])
                     incoming_without_stats = incoming_players - incoming_with_stats
-
+                    
                     roster_changes.loc[index, "INCOMING_COUNT"] = len(incoming_players)
                     roster_changes.loc[index, "INCOMING_WITH_STATS"] = len(incoming_with_stats)
                     roster_changes.loc[index, "INCOMING_WITHOUT_STATS"] = len(incoming_without_stats)
@@ -1088,14 +1208,112 @@ class PredictorV3:
             how="left"
         )
         
-        injuries = pandas.read_csv("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\injuries.csv")
+        manual_additions = pandas.DataFrame([
+            {
+                "TEAM_ID": 1610612766,
+                "PLAYER_ID": 1643225,
+                "PLAYER_NAME": "Kobe Stewart",
+                "ROSTERSTATUS": 1,
+                "SEASON": "2026-27",
+                "POSITION": pandas.NA
+            }
+        ])
 
-        injuries = injuries.merge(future_roster[["PLAYER_ID", "PLAYER_NAME"]], on = "PLAYER_NAME", how = "left")
-        injuries.to_csv("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\injuries.csv", index = False)
+        future_roster = pandas.concat(
+            [future_roster, manual_additions],
+            ignore_index=True
+        )
+
+        future_roster = future_roster.drop_duplicates(
+            subset=["PLAYER_ID"],
+            keep="first"
+        )
+        
+        future_roster.to_csv(
+            "C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\2026-27_rosters.csv",
+            index=False
+        )
+        
+        return future_roster
+
+        #injuries = injuries.merge(future_roster[["PLAYER_ID", "PLAYER_NAME"]], on = "PLAYER_NAME", how = "left")
+        #injuries.to_csv("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\injuries.csv", index = False)
         
 predictor = PredictorV3()
 #result, hist_data = predictor.predict_season("2023-24")
 
 #future_predictions = predictor.train_final_model(hist_data)
 
-predictor.predict_season("2023-24")
+future_data, future_X = predictor.build_future_roster_features()
+
+print(
+    future_data[
+        [
+            "TEAM_NAME",
+            "INCOMING_COUNT",
+            "INCOMING_WITH_STATS",
+            "INCOMING_WITHOUT_STATS",
+            "INCOMING_STAT_COVERAGE"
+        ]
+    ]
+)
+
+def winner(row):
+    if abs(row["MAE_OOF"] - row["MAE_FALLBACK"]) < 1e-10:
+        return "TIE"
+    elif row["MAE_OOF"] < row["MAE_FALLBACK"]:
+        return "OOF"
+    else:
+        return "FALLBACK"
+
+#with open("rookie_weight_ablation.txt", "w") as f:
+    with redirect_stdout(f):
+
+        fallback = predictor.take_all_seasons(
+            use_oof=False,
+            rookie_weight=0.0
+        )
+
+        for i in [0.0, 0.25, 0.5, 0.75, 1.0]:
+
+            print(f"\nRookie Weight: {i}")
+
+            oof = predictor.take_all_seasons(
+                use_oof=True,
+                rookie_weight=i
+            )
+
+            comparison = fallback.merge(
+                oof,
+                on="TEST_SEASON",
+                suffixes=("_FALLBACK", "_OOF")
+            )
+
+            comparison["WINNER"] = comparison.apply(winner, axis=1)
+
+            print(comparison)
+
+            print(
+                "Fallback mean MAE:",
+                comparison["MAE_FALLBACK"].mean()
+            )
+
+            print(
+                "OOF mean MAE:",
+                comparison["MAE_OOF"].mean()
+            )
+
+            print(
+                "Fallback wins:",
+                (comparison["WINNER"] == "FALLBACK").sum()
+            )
+
+            print(
+                "OOF wins:",
+                (comparison["WINNER"] == "OOF").sum()
+            )
+            
+            print(
+                "Ties:",
+                (comparison["WINNER"] == "TIE").sum()
+            )

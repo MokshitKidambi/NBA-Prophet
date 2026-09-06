@@ -200,26 +200,7 @@ class MissingStats:
                 .fillna(roster_stats[stat])
             )
         
-        check_ids = [1641935, 1631215]
-        
-        print(
-            roster_stats.loc[
-                roster_stats["PLAYER_ID"].isin(check_ids),
-                [
-                    "PLAYER_ID",
-                    "PLAYER_NAME",
-                    "TEAM_ID",
-                    "STATUS",
-                    "STAT_SOURCE",
-                    "MODEL_MPG",
-                    "MODEL_PPG",
-                    "MODEL_RPG",
-                    "MODEL_APG",
-                    "MODEL_TS_PCT",
-                    "MODEL_USG_PCT",
-                ]
-            ]
-        )
+        roster_stats.to_csv("roster_stats_model_ready.csv", index = False)
                     
     def track_first_valuable_NBA_season_data(self):
         roster_stats = self.roster_stats
