@@ -7,7 +7,7 @@ from sklearn.metrics import mean_absolute_error
 from nba_api.stats.endpoints import commonallplayers
 from nba_api.stats.endpoints import playerindex
 
-class PredictorV3:
+class PredictorV4:
     def __init__(self):
         self.X = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV", "RETURNING_SCORING_SHARE"]
         self.dummyX = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV", "RETURNING_SCORING_SHARE"]
@@ -1239,7 +1239,7 @@ class PredictorV3:
         #injuries = injuries.merge(future_roster[["PLAYER_ID", "PLAYER_NAME"]], on = "PLAYER_NAME", how = "left")
         #injuries.to_csv("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\injuries.csv", index = False)
         
-predictor = PredictorV3()
+predictor = PredictorV4()
 #result, hist_data = predictor.predict_season("2023-24")
 
 #future_predictions = predictor.train_final_model(hist_data)
