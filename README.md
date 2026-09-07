@@ -1,179 +1,217 @@
-GEAR 4 NBA PROPHET
+# NBA Prophet
 
-How NBA Prophet Works
-Developed by Mokshit Kidambi
+NBA Prophet is a machine learning project that predicts each NBA team's regular-season record for the 2026–27 season.
 
-NBA Prophet predicts each team's next-season performance using historical team performance, roster movement, continuity, and availability-related features.
+The project combines historical team performance, player movement, roster continuity, player availability, and roster-change features into a season-to-season prediction model. The final system uses Ridge Regression trained on historical NBA seasons and produces projected win totals for all 30 teams.
 
-What Data Goes Into the Model
-To decide what data would be best to use for the prediction model, I had conducted extensive research on the different types of statistics that exist in the NBA. My reasearch can be sectioned into 2 sections: Module 1 and Module 2.
+## 2026–27 Predictions
 
-The former contained team statistics and weighed the capabilities of traditional statistics, shooting efficiency, possession-based statistics, and possession control.
+NBA Prophet's top five projected teams are:
 
-The latter contained player statistics and focused on analyzing traditional statistics, player efficiency, usage & offensive responsibility, advanced impact metrics, on & off impact, and availability.
+| Rank | Team | Projected Wins |
+|---|---|---:|
+| 1 | San Antonio Spurs | 59.3 |
+| 2 | Houston Rockets | 57.2 |
+| 3 | Detroit Pistons | 55.5 |
+| 4 | Oklahoma City Thunder | 54.9 |
+| 5 | New York Knicks | 51.6 |
 
-Feature Selection
-Then, at the end of each module, I formatted all gathered statistics into 3 sections:
+The complete 30-team prediction table is available in:
 
-Initial Features
-Might Keep
-Take Out
-Which is how I was able to choose which stats to use for the model.
+`nba_prophet_2026_27_predictions.csv`
 
-Things that were considered to make those decisions are the stat's significance, pros and cons, and predictive value.
+Predicted league wins are normalized to 1,230, because every NBA game produces exactly one win and one loss.
 
-Thus, I decided to keep the following statistics for the first part of the model:
+## Model Performance
 
-Module 1:
-PPG
-Opponent PPG
-TS%
-Net Rating
-TOV%
-ORB%
-DRB%
-AST Ratio
-Module 2:
-PPG
-MPG
-TS%
-USG%
-VORP
-GP
-Multi-Season Availability
-Gathering and Organizing the Data
-After gathering statistics using the NBA's API, I made a folder for unfiltered traditional and advanced statistics, where I also made sub folders for players and teams. would then only keep the ones that are in the initial features list that I made, which also required me to derive new stats, such as PPG through a team/player's total points divided by their total games played.
+NBA Prophet was evaluated using walk-forward historical backtesting.
 
-Then, I took these unfiltered data and modify them to fit the criteria for the prediction model, which was stored in the filtered folder of my data folder and it followed the same behavior as the unfiltered folder.
+The final Ridge Regression model achieved:
 
-Such a process had to be implemented as some of the stats were redundant while others had a fair amount of flaws as benefits.
+| Metric | Result |
+|---|---:|
+| Mean Absolute Error | 6.75 wins/team |
+| Median Absolute Error | 6.12 wins |
+| 80th percentile error | 10.82 wins |
+| 90th percentile error | 13.39 wins |
+| 95th percentile error | 15.60 wins |
 
-Monitoring Roster Changes
-However, the most important part in all of this was monitoring roster changes of each team, which was tracked by 3 separate data frames:
+The model was also evaluated against simpler baselines, including previous-season win percentage and a league-average `.500` prediction.
 
-Returning
-Incoming
-Outgoing
-It's methodology is quite simple: Returning are the players who have stayed on the same team in the following season; Incoming are new players added during the off-season or regular season via trades; Outgoing are players who left the team in free-agency or those who were traded.
+An additional later-season holdout produced an MAE of approximately 9.0 wins/team while still outperforming both baseline approaches.
 
-Creating New Statistics
-Using these data frames, I created new statistics such as Scoring Load (PPG times MPG), then later expanded to Efficiency, Usage, and Plus Minus Load, and Weighted True Shooting Percentage (TS_PCT times TOTAL_MINS).
+## Final Model
 
-Plus, the load statistics were converted to net statistics that displayed the loss or gain for each load statistic following major signings or trades that lead into the upcoming season.
+The final model is:
 
-With the use of these data frames, a team's loss in production versus their gain through other acquisitions were closely monitored, leading to new statistics such as Scoring Share, which was the result of the scoring load divided by the scoring load of the previous season for the appropriate data frame.
+`StandardScaler → Ridge Regression (alpha = 2.0)`
 
-Like previously, the expansion of this idea led to other shares such as efficiency, usage, and plus minus (which was dropped later because of its low contribution), and then converted to net statistics.
+Ridge Regression was selected after comparing:
 
-Core Availability
-In addition, it is also important to measure the availability of a team's core, which consists of its eight best players, thus stats such as Core Availability and its standard deviation were created to measure the availability of those core players during the following season.
+- Ridge Regression
+- Elastic Net
+- Gradient Boosting
 
-Final 13 Features
-And after trial and error with the model, these 13 features became the backbone of the model:
+Ridge produced the strongest combination of mean prediction error, median error, worst-season performance, and year-to-year stability.
 
-Net Rating
-Team Turnover Percentage
-Defensive Rebound Percentage
-Assist Ratio
-Pace
-Net PPG Change
-Retained Minutes
-Net Scoring Load
-Net Efficiency Load
-Net Usage Load
-Net Plus-Minus Load
-Standard Deviation of Core Availability
-Returning Scoring Share
-Therefore, these were the statistics developed to train the model in predicting the regular season win record for all 30 NBA teams.
+## Features
 
-How the Model Learns
-In order to predict the 2026-27 regular season records, I decided that it would be best to train my model on the data of the last 30 NBA seasons, so that each season would predict the record of the following season until the 2025-26 NBA season.
+NBA Prophet uses 13 final features:
 
-I used the pandas library sci-kit learn in order to train my prediction model. I started by using common models such as Linear Regression, which gave me a basic but well idea aboutcorrelation between a certain stat and my Y-coordinate, which was the regular season win percentage of the following NBA season.
+| Feature | Description |
+|---|---|
+| `NET_RATING` | Team point differential per 100 possessions |
+| `TM_TOV_PCT` | Team turnover percentage |
+| `DREB_PCT` | Defensive rebounding percentage |
+| `AST_RATIO` | Team assist ratio |
+| `PACE` | Estimated possessions per game |
+| `NET_PPG_CHANGE` | Incoming minus outgoing player scoring |
+| `RETAINED_MINUTES` | Share of roster minutes retained |
+| `NET_SCORING_LOAD` | Change in scoring production weighted by minutes |
+| `NET_EFFICIENCY_LOAD` | Change in efficiency weighted by minutes |
+| `NET_USAGE_LOAD` | Change in usage weighted by minutes |
+| `NET_PLUS_MINUS_LOAD` | Change in plus-minus production weighted by minutes |
+| `CORE_AVAILABILITY_STD_DEV` | Variation in availability among a team's core players |
+| `RETURNING_SCORING_SHARE` | Share of previous scoring production retained |
 
-Evaluating the Model
-To quantify my results, I generated 2 columns in my result Data Frame:
+## Roster Modeling
 
-Predicted Wins per 82 (predicted win percentage times 82)
-Absolute Wins per 82 (next season win percentage times 82)
-Then, I took the difference of both to get the absolute and predicted errors.
+One of the main challenges was representing offseason roster changes.
 
-In addition, mean absolute error was a measure that I used to see how far the wins generated by my predicted model were from the actual team wins on average for all teams from that season's standings.
+For every team and season transition, players are classified as:
 
-To make sense of the stat, I multiplied it by 82 to get the mean absolute error wins.
+`RETURNING`, `INCOMING`, or `OUTGOING`
 
-Thus, my evaluation of which statistics worked best was based on the lowest amount of mean absolute error wins on average across the 2017-18 to 2023-24 seasons, which are the seven seasons I trained the model on.
+NBA Prophet then calculates how much scoring, efficiency, usage, plus-minus production, and playing time were gained or lost.
 
-The lowest mean absolute error wins reached through the entire training process was 6.776 wins, using the 13 features mentioned before.
+The model also accounts for continuity by measuring retained minutes, returning scoring share, and availability of core players.
 
-Comparison Models
-For comparison's sake, I also took:
+## Rookie and No-History Players
 
-A simple mean absolute error, which is based on what would happen if all teams were projected to have a 0.500 win percentage
-A naive mean absolute error, which was on the assumption that teams' win percentage would not change in the following year, regardless of any off-season moves their front office makes.
-Feature Refinement
-Subsequently, this process led me to try out many different stats where I found out which benefitted the model, and vice versa.
+Players entering the NBA without historical NBA statistics required a separate data pipeline.
 
-Some previously discussed statistics were removed, such as:
+College, international, and G League statistics were collected and translated toward expected NBA production using historical player transitions.
 
-the efficiency share for the returning players
-the core availability stat (but its standard deviation proved useful)
-Model Refinement
-Then, I switched up the models from Linear Regression to see if other models produce the same results or not, which led me to try:
+To avoid leakage, historical translations were evaluated using out-of-fold rookie predictions.
 
-Ridge Regression
-Elastic Net (Lasso Regression)
-Which both needed standardization of the features using Standard Scaler.
+However, ablation testing showed that adding translated rookie production consistently reduced historical prediction accuracy at every tested weighting level.
 
-By doing that, the Ridge Regression proved to be slightly more useful so I switched the model to using Ridge.
+As a result, the final predictive model assigns first-entry translated players a predictive weight of zero.
 
-Later, I switched up the linear pattern and tried other models such as:
+The translation system remains in the project for roster coverage, experimentation, and future model development.
 
-Random Forest Regressor
-Gradient Boosting Regressor
-But none of them provided any benefits, therefore using Ridge as the official model for the prediction engine.
+## Validation
 
-Finally, alongside the projected wins, I also added Roster Confidence and Roster Sensitivity to provide a measure of how trustworthy the predictions are.
+Several stress tests were performed before generating the final 2026–27 predictions.
 
-How 2026–27 Predictions Are Made
-2025–26 Team Performance
-+
-2025–26 → 2026–27 Roster Changes
-+
-Continuity & Availability Features
-↓
-13 Final Features
-↓
-StandardScaler
-↓
-Ridge Regression
-↓
-League Calibration
-↓
-Final Projected Wins
+### Model Comparison
 
-Understanding the Standings
-The resulting standings are simple to understand. The 30 NBA teams are divided into the Eastern and Western Conferences, based on their geography, and are ranked from 1 through 15 based on their regular season win totals.
+Ridge Regression outperformed Elastic Net and Gradient Boosting in the initial seven-season comparison.
 
-Thus, the engine predicts:
+### Hyperparameter Testing
 
-The Detroit Pistons to have the number 1 seed in the Eastern Conference
-The San Antonio Spurs to have the number 1 seed in the Western Conference
-Meanwhile, it displays:
+Ridge alpha values from `0.1` through `50` were tested.
 
-The Washington Wizards at the very bottom of the Eastern Conference
-The Sacramento Kings at the very bottom of the Western Conference
-Model Limitations
-While the model is able to provide these predictions at a high level, there are some significant limitations it faces that stops it from being fully accurate.
+`alpha = 2.0` was selected because it was essentially tied for the best mean MAE while providing slightly stronger median and worst-season performance.
 
-First, the model seems to not account for dynamic factors such as:
+### Coefficient Stability
 
-Coaching adjustments
-Team chemistry
-Player issues on and off the court
-Etc.
-These factors that are all very impactful on the success of an NBA team throughout an 82 game regular season.
+12 of the 13 model features maintained the same coefficient sign across all seven historical backtest folds.
 
-Second, the emergence of NBA rookies means that there are no available statistics that could measure their impact, which can lead to the predictions being thrown off by a good amount.
+`AST_RATIO` was the only feature with inconsistent coefficient direction, and its coefficient magnitude was extremely small.
 
-However, as the model is still in its early stages, it will continued to be improved with the means of surpassing said limitations in the future.
+### Feature Ablation
+
+Removing `NET_RATING` increased prediction error by approximately 1.31 wins/team, making it the strongest individual predictor.
+
+Other important contributors included:
+
+`NET_SCORING_LOAD`
+
+`NET_PLUS_MINUS_LOAD`
+
+`NET_EFFICIENCY_LOAD`
+
+No secondary feature showed enough harmful out-of-sample impact to justify reopening feature selection.
+
+### Future-Data Extrapolation
+
+Every 2026–27 feature value was checked against the historical training distribution.
+
+No future feature exceeded an absolute z-score of 3.0, indicating that the final model is not making predictions from extreme values outside its historical training range.
+
+## Prediction Uncertainty
+
+NBA Prophet reports historical prediction-error bands alongside each point prediction.
+
+For example, a team projected for 50 wins may also receive:
+
+- 80% historical error band: approximately ±10.8 wins
+- 90% historical error band: approximately ±13.4 wins
+- 95% historical error band: approximately ±15.6 wins
+
+These are empirical historical prediction-error bands, not formal statistical confidence intervals.
+
+They represent how large NBA Prophet's prediction errors were across historical walk-forward tests.
+
+## Project Pipeline
+
+Historical NBA data
+→ Player and team feature engineering
+→ Season-to-season roster comparison
+→ Availability and continuity modeling
+→ Rookie/no-history processing
+→ Walk-forward historical validation
+→ Model comparison and tuning
+→ Final Ridge model
+→ 2026–27 feature construction
+→ 30-team win predictions
+→ League-win normalization
+→ Historical error bands
+
+## Technologies
+
+Python
+
+pandas
+
+NumPy
+
+scikit-learn
+
+nba_api
+
+## Project Status
+
+The predictive pipeline and 2026–27 projections are complete.
+
+Current work focuses on visualization, documentation, interpretability, and portfolio presentation.
+
+## 2026–27 Projected Wins
+
+![NBA Prophet 2026–27 Predictions](nba_prophet_2026_27_predictions.png)
+
+## Limitations and Future Work
+
+NBA Prophet is designed as a season-level prediction model, so several important sources of uncertainty remain.
+
+### Limitations
+
+- Injuries, suspensions, trades, and roster changes that occur after the prediction date are not reflected automatically.
+- Rookie and first-NBA-entry player translations were tested historically but were excluded from the final predictive features because they reduced validation performance.
+- The model does not explicitly simulate the NBA schedule or opponent strength game-by-game.
+- Several roster-change features are correlated, so individual Ridge coefficients should be interpreted as model associations rather than causal basketball effects.
+- Historical prediction-error bands describe past model error and are not formal statistical confidence intervals.
+- Team performance can change dramatically because of coaching changes, player development, chemistry, or unexpected breakout seasons that are difficult to quantify before the season.
+
+### Future Work
+
+Potential future improvements include:
+
+- player aging and development curves
+- injury probability and expected-games-played modeling
+- schedule-strength adjustments
+- game-by-game season simulation
+- improved rookie and international-player translation models
+- player-level projections feeding into team-level predictions
+- probabilistic win distributions rather than only point estimates

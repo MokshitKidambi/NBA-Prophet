@@ -255,9 +255,9 @@ Meanwhile, it displays:
 st.header("Model Limitations")
 
 st.markdown("""
-While the model is able to provide these predictions at a high level, there are some significant limitations it faces that stops it from being fully accurate.
+While the model is able to provide these predictions at a high level, there is a significant limitation it faces that stops it from being fully accurate.
 
-First, the model seems to not account for dynamic factors such as:
+The model seems to not account for dynamic factors such as:
 
 - Coaching adjustments
 - Team chemistry
@@ -265,10 +265,6 @@ First, the model seems to not account for dynamic factors such as:
 - Etc.
 
 These factors that are all very impactful on the success of an NBA team throughout an 82 game regular season.
-
----
-
-Second, the emergence of NBA rookies means that there are no available statistics that could measure their impact, which can lead to the predictions being thrown off by a good amount.
 
 ---
 

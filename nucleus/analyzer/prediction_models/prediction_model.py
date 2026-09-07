@@ -1,7 +1,8 @@
 from pathlib import Path
 import pandas
 from contextlib import redirect_stdout
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import Ridge, ElasticNet
+from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error
 from nba_api.stats.endpoints import commonallplayers
@@ -26,8 +27,8 @@ class PredictorV4:
         self.team_experiment_features = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE"]
         self.player_experiment_features = ["PPG", "TS_PCT","USG_PCT", "MPG", "TOTAL_MINS", "GP", "PLUS_MINUS"]
 
-        self.team_training_ground_path = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\features\\training_ground.csv")
-        self.player_feature_history = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\features\\player_feature_history.csv")
+        self.team_training_ground_path = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear4\\data\\features\\training_ground.csv")
+        self.player_feature_history = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear4\\data\\features\\player_feature_history.csv")
         self.season = "FEATURE_SEASON"
 
         self.median_historical_error = 6.392883589805631
@@ -57,7 +58,6 @@ class PredictorV4:
         self.test_seasons = ["2017-18", "2018-19", "2019-20", "2020-21", "2021-22", "2022-23", "2023-24"]
 
     def predict_season(self, test_season, team_index = 0, explain = False, use_oof = False, rookie_weight = 1.0):
-        print("PREDICT_SEASON ROOKIE WEIGHT:", rookie_weight)
         
         training_ground = pandas.read_csv(self.team_training_ground_path)
         player_feature_history = pandas.read_csv(self.player_feature_history)
@@ -100,7 +100,7 @@ class PredictorV4:
             on=["TEAM_ID", "SEASON"],
             how="inner"
         )
-
+        
         player_team_seasons = (player_feature_history.groupby(["TEAM_ID", "SEASON"], as_index = False))
 
         player_feature_history["SCORING_LOAD"] = player_feature_history["PPG"] * player_feature_history["MPG"]
@@ -467,18 +467,6 @@ class PredictorV4:
             )
         )
         
-        print(
-            historical_missing_incoming["MISSING_TYPE"]
-            .value_counts()
-        )
-
-        print(
-            historical_missing_incoming
-            .groupby(["OLD_SEASON", "MISSING_TYPE"])
-            .size()
-            .unstack(fill_value=0)
-        )
-        
         coverage = (
             roster_changes
             .groupby("OLD_SEASON")[
@@ -495,9 +483,7 @@ class PredictorV4:
             coverage["INCOMING_WITH_STATS"]
             / coverage["INCOMING_COUNT"]
         )
-
-        print(coverage)
-
+        
         first_entries = historical_missing_incoming[historical_missing_incoming["MISSING_TYPE"] == "FIRST_NBA_ENTRY"].copy()
         
         if use_oof:
@@ -584,28 +570,61 @@ class PredictorV4:
 
         X_train_scaled = scaler.fit_transform(X_train)
         X_test_scaled = scaler.transform(X_test)
-         
-        model = Ridge(alpha = 7.0)
-         
+        
+        #if model_type == "ridge":
+        model = Ridge(alpha= 2.0)
+
+        #elif model_type == "elastic_net":
+            #model = ElasticNet(
+                #alpha= alpha,
+                #l1_ratio = l1_ratio,
+                #max_iter=10000
+            #)
+
+        #elif model_type == "gradient_boosting":
+            #model = GradientBoostingRegressor(
+                #random_state=42
+            #)
+
+        #else:
+            #raise ValueError(f"Unknown model type: {model_type}")
+
         model.fit(X_train_scaled, Y_train)
 
-        model_coef = pandas.DataFrame()
+        if hasattr(model, "coef_"):
 
-        for i in range(len(self.X)):
-            model_coef.loc[i, "FEATURE"] = self.X[i]
-            model_coef.loc[i, "COEFFICIENT"] = model.coef_[i] * 82
-            model_coef.loc[i, "ABS_COEFFICIENT"] = abs(model.coef_[i] * 82)
+            model_coef = pandas.DataFrame()
 
-        model_coef = model_coef.sort_values(by = "ABS_COEFFICIENT", ascending = False)
+            for i in range(len(self.X)):
+                model_coef.loc[i, "FEATURE"] = self.X[i]
+                model_coef.loc[i, "COEFFICIENT"] = model.coef_[i] * 82
+                model_coef.loc[i, "ABS_COEFFICIENT"] = abs(
+                    model.coef_[i] * 82
+                )
 
-        contributions = X_test_scaled * model.coef_
-        contribution_wins = contributions * 82
-         
-        prediction = model.predict(X_test_scaled)
+            model_coef = model_coef.sort_values(
+                by="ABS_COEFFICIENT",
+                ascending=False
+            )
 
-        team_contributions = pandas.DataFrame({"FEATURE": self.X, "CONTRIBUTION_WINS": contribution_wins[team_index]})
-        team_contributions["ABS_CONTRIBUTION"] = abs(team_contributions["CONTRIBUTION_WINS"])
-        team_contributions = team_contributions.sort_values(by = "ABS_CONTRIBUTION", ascending = False)        
+            contributions = X_test_scaled * model.coef_
+            contribution_wins = contributions * 82
+
+            team_contributions = pandas.DataFrame({
+                "FEATURE": self.X,
+                "CONTRIBUTION_WINS": contribution_wins[team_index]
+            })
+
+            team_contributions["ABS_CONTRIBUTION"] = abs(
+                team_contributions["CONTRIBUTION_WINS"]
+            )
+
+            team_contributions = team_contributions.sort_values(
+                by="ABS_CONTRIBUTION",
+                ascending=False
+            )    
+            
+        prediction = model.predict(X_test_scaled)    
                 
         mae = mean_absolute_error(Y_test, prediction)
          
@@ -677,7 +696,7 @@ class PredictorV4:
                 result, _ = self.predict_season(
                     season,
                     use_oof = use_oof,
-                    rookie_weight = rookie_weight
+                    rookie_weight = rookie_weight,
                 )
 
                 results.append({
@@ -874,29 +893,17 @@ class PredictorV4:
         return future_data
 
     def build_future_roster_features(self):
-        result, hist_data = self.predict_season("2023-24")
+        #result, hist_data = self.predict_season("2023-24", use_oof = False, rookie_weight = 0.0)
         training_ground = pandas.read_csv(self.team_training_ground_path)
         player_feature_history = pandas.read_csv(self.player_feature_history)
-        future_roster_stats = pandas.read_csv("roster_stats_model_ready.csv")
 
-        players = commonallplayers.CommonAllPlayers(
-            is_only_current_season=1,
-            league_id="00",
-            season="2026-27"
-        ).get_data_frames()[0]
+        PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-
-        all_rosters = players[players["TEAM_ID"] != 0][["TEAM_ID", "PERSON_ID", "DISPLAY_FIRST_LAST", "ROSTERSTATUS"]].copy()
-
-        all_rosters.rename(
-            columns={
-                "PERSON_ID": "PLAYER_ID",
-                "DISPLAY_FIRST_LAST": "PLAYER_NAME"
-            },
-            inplace=True
+        future_roster_stats = pandas.read_csv(
+            r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\gear4\data\features\roster_stats_model_ready.csv"
         )
 
-        all_rosters["SEASON"] = "2026-27"
+        all_rosters = self._2027_roster().copy()
 
         team_ids = [1610612737, 1610612738, 1610612751, 1610612766, 1610612741, 1610612739, 1610612742, 1610612743, 1610612765, 1610612744, 1610612745, 1610612746, 1610612747, 1610612763, 1610612748, 1610612749, 1610612750, 1610612752, 1610612753, 1610612754, 1610612755, 1610612756, 1610612757, 1610612758, 1610612759, 1610612760, 1610612761, 1610612762, 1610612764, 1610612740]
 
@@ -975,6 +982,28 @@ class PredictorV4:
                 "SEASON_x": "SEASON"
             },
             inplace=True
+        )
+        
+        trade_map = {
+            202695: 1610612761,   # Kawhi -> Toronto
+            1627742: 1610612746,  # Ingram -> Clippers
+            1641711: 1610612746   # Gradey Dick -> Clippers
+        }
+
+        for player_id, new_team_id in trade_map.items():
+            future_roster_stats.loc[
+                future_roster_stats["PLAYER_ID"] == player_id,
+                "TEAM_ID"
+            ] = new_team_id
+            
+        trade_ids = [202695, 1627742, 1641711]
+
+        print(
+            future_roster_stats[
+                future_roster_stats["PLAYER_ID"].isin(trade_ids)
+            ][
+                ["PLAYER_ID", "PLAYER_NAME", "TEAM_ID", "STATUS"]
+            ]
         )
 
         for index, row in roster_changes.iterrows():
@@ -1229,91 +1258,64 @@ class PredictorV4:
             keep="first"
         )
         
+        future_roster["PLAYER_ID"] = pandas.to_numeric(
+            future_roster["PLAYER_ID"],
+            errors="coerce"
+        ).astype("Int64")
+
+        trade_ids = [202695, 1627742, 1641711]
+
+        print(
+            future_roster[
+                future_roster["PLAYER_ID"].isin(trade_ids)
+            ][
+                ["PLAYER_ID", "PLAYER_NAME", "TEAM_ID"]
+            ]
+        )        
+        
+        trade_map = {
+            202695: 1610612761,   # Kawhi -> TOR
+            1627742: 1610612746,  # Ingram -> LAC
+            1641711: 1610612746   # Gradey Dick -> LAC
+        }
+
+        for player_id, new_team_id in trade_map.items():
+
+            mask = future_roster["PLAYER_ID"] == player_id
+
+            print(
+                f"PLAYER {player_id}: "
+                f"{mask.sum()} matching rows"
+            )
+
+            future_roster.loc[
+                mask,
+                "TEAM_ID"
+            ] = new_team_id
+        
+        roster_path = (
+            r"C:\Users\kidam\OneDrive\Documents\pythonstuff"
+            r"\NBA-Prophet\gear4\data\rosters"
+            r"\2026-27_rosters.csv"
+        )
+
         future_roster.to_csv(
-            "C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\2026-27_rosters.csv",
+            roster_path,
             index=False
+        )
+
+        check = pandas.read_csv(roster_path)
+
+        print(
+            check[
+                check["PLAYER_ID"].isin(trade_ids)
+            ][
+                ["PLAYER_ID", "PLAYER_NAME", "TEAM_ID"]
+            ]
         )
         
         return future_roster
 
-        #injuries = injuries.merge(future_roster[["PLAYER_ID", "PLAYER_NAME"]], on = "PLAYER_NAME", how = "left")
-        #injuries.to_csv("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\rosters\\injuries.csv", index = False)
-        
 predictor = PredictorV4()
-#result, hist_data = predictor.predict_season("2023-24")
 
-#future_predictions = predictor.train_final_model(hist_data)
-
-future_data, future_X = predictor.build_future_roster_features()
-
-print(
-    future_data[
-        [
-            "TEAM_NAME",
-            "INCOMING_COUNT",
-            "INCOMING_WITH_STATS",
-            "INCOMING_WITHOUT_STATS",
-            "INCOMING_STAT_COVERAGE"
-        ]
-    ]
-)
-
-def winner(row):
-    if abs(row["MAE_OOF"] - row["MAE_FALLBACK"]) < 1e-10:
-        return "TIE"
-    elif row["MAE_OOF"] < row["MAE_FALLBACK"]:
-        return "OOF"
-    else:
-        return "FALLBACK"
-
-#with open("rookie_weight_ablation.txt", "w") as f:
-    with redirect_stdout(f):
-
-        fallback = predictor.take_all_seasons(
-            use_oof=False,
-            rookie_weight=0.0
-        )
-
-        for i in [0.0, 0.25, 0.5, 0.75, 1.0]:
-
-            print(f"\nRookie Weight: {i}")
-
-            oof = predictor.take_all_seasons(
-                use_oof=True,
-                rookie_weight=i
-            )
-
-            comparison = fallback.merge(
-                oof,
-                on="TEST_SEASON",
-                suffixes=("_FALLBACK", "_OOF")
-            )
-
-            comparison["WINNER"] = comparison.apply(winner, axis=1)
-
-            print(comparison)
-
-            print(
-                "Fallback mean MAE:",
-                comparison["MAE_FALLBACK"].mean()
-            )
-
-            print(
-                "OOF mean MAE:",
-                comparison["MAE_OOF"].mean()
-            )
-
-            print(
-                "Fallback wins:",
-                (comparison["WINNER"] == "FALLBACK").sum()
-            )
-
-            print(
-                "OOF wins:",
-                (comparison["WINNER"] == "OOF").sum()
-            )
-            
-            print(
-                "Ties:",
-                (comparison["WINNER"] == "TIE").sum()
-            )
+predictor.build_future_roster_features()

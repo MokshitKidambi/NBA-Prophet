@@ -57,53 +57,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-def sort_conference(conference, sort_by):
-
-    conference = conference.copy()
-
-    if sort_by == "Projected Wins":
-
-        return conference.sort_values(
-            "ADJUSTED_WINS",
-            ascending=False
-        )
-
-    elif sort_by == "Roster Confidence":
-
-        confidence_order = {
-            "HIGH": 3,
-            "MEDIUM": 2,
-            "LOW": 1
-        }
-
-        conference["CONFIDENCE_ORDER"] = (
-            conference["ROSTER_CONFIDENCE"]
-            .map(confidence_order)
-        )
-
-        return conference.sort_values(
-            ["CONFIDENCE_ORDER", "ADJUSTED_WINS"],
-            ascending=[False, False]
-        )
-
-    elif sort_by == "Roster Sensitivity":
-
-        sensitivity_order = {
-            "LOW": 1,
-            "MEDIUM": 2,
-            "HIGH": 3
-        }
-
-        conference["SENSITIVITY_ORDER"] = (
-            conference["ROSTER_SENSITIVITY"]
-            .map(sensitivity_order)
-        )
-
-        return conference.sort_values(
-            ["SENSITIVITY_ORDER", "ADJUSTED_WINS"],
-            ascending=[True, False]
-        )
-
 if "intro_finished" not in st.session_state:
     st.session_state.intro_finished = False
 
@@ -190,8 +143,15 @@ def display_conference(conference, conference_name):
 
     st.subheader(conference_name)
 
-    column_widths = [0.35, 0.55, 1.8, 0.65, 0.65, 0.9, 1.0]    
-    
+    column_widths = [
+        0.35,
+        0.55,
+        1.8,
+        0.7,
+        0.7,
+        1.2
+    ]
+
     header = st.columns(column_widths)
 
     header[0].markdown("**Seed**")
@@ -199,33 +159,66 @@ def display_conference(conference, conference_name):
     header[2].markdown("**Team**")
     header[3].markdown("**Projected Wins**")
     header[4].markdown("**Projected Losses**")
-    header[5].markdown("**Roster Confidence**")
-    header[6].markdown("**Roster Sensitivity**")
+    header[5].markdown("**80% Error Band**")
 
     for _, team in conference.iterrows():
 
-        seed_col, logo_col, team_col, wins_col, losses_col, confi_col, sens_col = st.columns(
-            column_widths
-        )
+        (
+            seed_col,
+            logo_col,
+            team_col,
+            wins_col,
+            losses_col,
+            band_col
+        ) = st.columns(column_widths)
 
         seed_col.write(int(team["SEED"]))
 
-        logo_col.image(team["LOGO"], width = 45)
+        logo_col.image(
+            team["LOGO"],
+            width=45
+        )
 
         with team_col:
-            if st.button(team["TEAM_NAME"], key = f"team_{int(team['TEAM_ID'])}", type = "tertiary"):
-                st.session_state.selected_team = team["TEAM_NAME"]
-                st.switch_page("pages/team_details.py")
 
-        wins_col.write(int(team["DISPLAY_WINS"]))
-        losses_col.write(int(team["DISPLAY_LOSSES"]))
-        confi_col.write(team["ROSTER_CONFIDENCE"])
-        sens_col.write(team["ROSTER_SENSITIVITY"])
+            if st.button(
+                team["TEAM_NAME"],
+                key=f"team_{int(team['TEAM_ID'])}",
+                type="tertiary"
+            ):
+                st.session_state.selected_team = (
+                    team["TEAM_NAME"]
+                )
+
+                st.switch_page(
+                    "pages/team_details.py"
+                )
+
+        wins_col.write(
+            int(team["DISPLAY_WINS"])
+        )
+
+        losses_col.write(
+            int(team["DISPLAY_LOSSES"])
+        )
+
+        band_col.write(
+            f"{team['LOW_80']:.1f} – "
+            f"{team['HIGH_80']:.1f}"
+        )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 predictions = pd.read_csv(
-    BASE_DIR / "data" / "display" / "engine_display_file.csv"
+    BASE_DIR / "data" / "display" / "nba_prophet_2026_27_predictions.csv"
+)
+
+predictions["DISPLAY_WINS"] = (
+    predictions["ADJUSTED_WINS"].round().astype(int)
+)
+
+predictions["DISPLAY_LOSSES"] = (
+    82 - predictions["DISPLAY_WINS"]
 )
 
 predictions = predictions.sort_values(
@@ -308,8 +301,8 @@ if st.session_state.reveal_stage >= 1:
         ]
     )
     
-    east_display = sort_conference(east, sort_by)
-    west_display = sort_conference(west, sort_by)
+    east_display = east
+    west_display = west
     
     east_tab, west_tab = st.tabs([
         "Eastern Conference",

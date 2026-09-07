@@ -6,11 +6,19 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 player_feature_history = pd.read_csv(BASE_DIR / "data" / "features" / "player_feature_history.csv")
-predictions = pd.read_csv(BASE_DIR / "data" / "display" / "engine_display_file.csv")
+predictions = pd.read_csv(BASE_DIR / "data" / "display" / "nba_prophet_2026_27_predictions.csv")
 roster_changes = pd.read_csv(BASE_DIR / "data" / "rosters" / "2025-26_to_2026-27_roster_changes.csv")
 old_roster = pd.read_csv(BASE_DIR / "data" / "rosters" / "2025-26_roster.csv")
 future_roster = pd.read_csv(BASE_DIR / "data" / "rosters" / "2026-27_rosters.csv")
 injuries = pd.read_csv(BASE_DIR / "data" / "rosters" / "injuries.csv")
+
+predictions["DISPLAY_WINS"] = (
+    predictions["ADJUSTED_WINS"].round().astype(int)
+)
+
+predictions["DISPLAY_LOSSES"] = (
+    82 - predictions["DISPLAY_WINS"]
+)
 
 st.markdown("""
 <style>
@@ -81,60 +89,46 @@ with top_left:
     st.subheader(
         f"Projected Record: {team['PROJECTED_RECORD']}"
     )
-
+    
     st.write(
-        f"• Roster Confidence: {team['ROSTER_CONFIDENCE']}"
+        f"• Projected Win Percentage: "
+        f"{team['ADJUSTED_WIN_PCT'] * 100:.1f}%"
     )
 
     st.write(
-        f"• Roster Sensitivity: {team['ROSTER_SENSITIVITY']}"
+        f"• 80% Historical Error Band: "
+        f"{team['LOW_80']:.1f} – {team['HIGH_80']:.1f} wins"
     )
     
 with top_right:
 
-    st.header("What Drives the Prediction?")
+    st.header("Prediction Range")
 
-    positive_col, negative_col = st.columns(2)
+    st.metric(
+        "Projected Wins",
+        f"{team['ADJUSTED_WINS']:.1f}"
+    )
 
-    with positive_col:
-        st.subheader("Top 3 Positive Contributors")
+    st.write(
+        f"**80% Historical Error Band:** "
+        f"{team['LOW_80']:.1f} – {team['HIGH_80']:.1f}"
+    )
 
-        for i in range(1, 4):
-            feature = team[
-                f"TOP_POSITIVE_CONTRIBUTOR_{i}"
-            ]
+    st.write(
+        f"**90% Historical Error Band:** "
+        f"{team['LOW_90']:.1f} – {team['HIGH_90']:.1f}"
+    )
 
-            wins = team[
-                f"TOP_POSITIVE_CONTRIBUTOR_{i}_WINS"
-            ]
+    st.write(
+        f"**95% Historical Error Band:** "
+        f"{team['LOW_95']:.1f} – {team['HIGH_95']:.1f}"
+    )
 
-            st.write(
-                f"▲ {feature}"
-            )
-
-            st.caption(
-                f"+{wins:.2f} wins"
-            )
-
-    with negative_col:
-        st.subheader("Top 3 Negative Contributors")
-
-        for i in range(1, 4):
-            feature = team[
-                f"TOP_NEGATIVE_CONTRIBUTOR_{i}"
-            ]
-
-            wins = team[
-                f"TOP_NEGATIVE_CONTRIBUTOR_{i}_WINS"
-            ]
-
-            st.write(
-                f"▼ {feature}"
-            )
-
-            st.caption(
-                f"{wins:.2f} wins"
-            )
+    st.caption(
+        "These ranges are based on NBA Prophet's historical "
+        "walk-forward prediction errors and are not formal "
+        "statistical confidence intervals."
+    )
 
 for column in ["RETURNING", "OUTGOING", "INCOMING"]:
     roster_changes[column] = roster_changes[column].apply(ast.literal_eval)
@@ -161,7 +155,6 @@ returning_names = future_roster[
 outgoing_names = old_roster[
     old_roster["PLAYER_ID"].isin(outgoing_ids)
 ][["PLAYER_ID", "PLAYER_NAME"]]
-
 
 team_future_roster = future_roster[
     future_roster["TEAM_ID"] == team_id
@@ -260,28 +253,46 @@ position_order = {
     "C": 5
 }
 
-projected_starters["POSITION_ORDER"] = (
-    projected_starters["POSITION"].map(position_order)
+if "POSITION" in team_lineup.columns:
+
+    projected_starters["POSITION_ORDER"] = (
+        projected_starters["POSITION"]
+        .map(position_order)
+        .fillna(99)
+    )
+
+    projected_starters = projected_starters.sort_values(
+        ["POSITION_ORDER", "MPG"],
+        ascending=[True, False]
+    )
+
+    bench["POSITION_ORDER"] = (
+        bench["POSITION"]
+        .map(position_order)
+        .fillna(99)
+    )
+
+    bench = bench.sort_values(
+        ["POSITION_ORDER", "MPG"],
+        ascending=[True, False]
+    )
+
+else:
+
+    projected_starters = projected_starters.sort_values(
+        "MPG",
+        ascending=False
+    )
+
+    bench = bench.sort_values(
+        "MPG",
+        ascending=False
+    )
+
+projected_starters["LINEUP_POSITION"] = (
+    projected_starters["POSITION"]
+    .fillna("—")
 )
-
-projected_starters = projected_starters.sort_values(
-    ["POSITION_ORDER", "MPG"],
-    ascending=[True, False]
-)
-
-lineup_positions = ["PG", "SG", "SF", "PF", "C"]
-
-
-bench["POSITION_ORDER"] = (
-    bench["POSITION"].map(position_order)
-)
-
-bench = bench.sort_values(
-    ["POSITION_ORDER", "MPG"],
-    ascending=[True, False]
-)
-
-projected_starters["LINEUP_POSITION"] = lineup_positions
 
 st.subheader("Projected Starters")
 
@@ -318,7 +329,13 @@ for start in range(0, len(bench), players_per_row):
     ):
         with column:
             st.image(player["PLAYER_IMAGE"], width=120)
-            st.markdown(f"### {player['POSITION']}")
+            position = (
+                player["POSITION"]
+                if "POSITION" in player.index and pd.notna(player["POSITION"])
+                else "—"
+            )
+
+            st.markdown(f"### {position}")
             st.write(player["PLAYER_NAME"])
             
             display_player_status(player)
