@@ -2,7 +2,7 @@ import pandas
 import matplotlib.pyplot as plt
 
 predictions = pandas.read_csv(
-    "nba_prophet_2026_27_predictions.csv"
+    r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\gear4\data\display\nba_prophet_2026_27_predictions.csv"
 )
 
 predictions = predictions.sort_values(
