@@ -191,6 +191,8 @@ team_lineup["PLAYER_IMAGE"] = team_lineup["PLAYER_ID"].apply(
         f"https://cdn.nba.com/headshots/nba/latest/260x190/{int(player_id)}.png"
 )
 
+injuries = injuries[injuries["EXPECTED_RETURN"] != "Oct 1"]
+
 team_lineup = team_lineup.merge(
     injuries[
         [
