@@ -1,5 +1,8 @@
 from pathlib import Path
 import pandas
+import torch
+import torch.nn as nn
+import copy
 from contextlib import redirect_stdout
 from sklearn.linear_model import Ridge, ElasticNet
 from sklearn.ensemble import GradientBoostingRegressor
@@ -7,8 +10,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error
 from nba_api.stats.endpoints import commonallplayers
 from nba_api.stats.endpoints import playerindex
+from neural_networks import NeuralNetworks
 
-class PredictorV4:
+class Predictor:
     def __init__(self):
         self.X = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV", "RETURNING_SCORING_SHARE"]
         self.dummyX = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE", "NET_PPG_CHANGE", "RETAINED_MINUTES", "NET_SCORING_LOAD", "NET_EFFICIENCY_LOAD", "NET_USAGE_LOAD", "NET_PLUS_MINUS_LOAD", "CORE_AVAILABILITY_STD_DEV", "RETURNING_SCORING_SHARE"]
@@ -55,7 +59,7 @@ class PredictorV4:
             "RETURNING_SCORING_SHARE": "Returning Scoring"
         }
         
-        self.test_seasons = ["2017-18", "2018-19", "2019-20", "2020-21", "2021-22", "2022-23", "2023-24"]
+        self.test_seasons = ["2020-21", "2021-22", "2022-23", "2023-24", "2024-25"]
 
     def predict_season(self, test_season, team_index = 0, explain = False, use_oof = False, rookie_weight = 1.0):
         
@@ -555,8 +559,9 @@ class PredictorV4:
 
         X_data = hist_data[self.X]
         Y_data = hist_data[self.Y]
-        season_data = hist_data[self.season]
-         
+        
+        season_data = hist_data["TARGET_SEASON"] 
+                
         train_mask = season_data < test_season
         test_mask = season_data == test_season
          
@@ -648,7 +653,7 @@ class PredictorV4:
             print(negative)
             print()
 
-        print(f"MAE: {mae}")
+        #print(f"MAE: {mae}")
 
         result = pandas.DataFrame()
          
@@ -670,21 +675,15 @@ class PredictorV4:
          
         median_error = result["ABSOLUTE_ERROR_82"].median()
                  
-        print(f"Median Error: {median_error}")
+        #print(f"Median Error: {median_error}")
          
         naive_prediction = hist_data.loc[test_mask, "W_PCT"]
         naive_mae = mean_absolute_error(Y_test, naive_prediction)
          
-        print(f"Naive MAE: {naive_mae}")
-        print(f"Naive MAE Wins: {naive_mae * 82}")
-         
         simple_prediction = [0.500] * len(Y_test)
          
         simple_mae = mean_absolute_error(Y_test, simple_prediction)
-         
-        print(f"Simple MAE: {simple_mae}")
-        print(f"Simple MAE Wins: {simple_mae * 82}")
-
+        
         return result, hist_data
 
     def take_all_seasons(self, use_oof = False, rookie_weight = 1.0):
@@ -692,6 +691,8 @@ class PredictorV4:
             results = []
 
             for season in self.test_seasons:
+                
+                print(f"{season} results: ")
 
                 result, _ = self.predict_season(
                     season,
@@ -1315,7 +1316,125 @@ class PredictorV4:
         )
         
         return future_roster
+    
+    def train_test_split(self, target_season, seed):
+        _, hist_data = self.predict_season("2023-24")
+        x = hist_data[self.X]
+                
+        y = hist_data[self.Y]
+        
+        hist_data["TARGET_YEAR"] = (
+            hist_data["TARGET_SEASON"]
+            .str[:4]
+            .astype(int)
+        )
+        
+        train_data = hist_data[hist_data["TARGET_YEAR"] < target_season]
+        val_data = hist_data[hist_data["TARGET_YEAR"] == target_season]
+                
+        X_train = train_data[self.X]
+        X_val = val_data[self.X]
 
-predictor = PredictorV4()
+        y_train = train_data[self.Y]
+        y_val = val_data[self.Y]
+        
+        scaler = StandardScaler() 
+        
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_val_scaled = scaler.transform(X_val)
+        
+        X_train_tensor = torch.tensor(X_train_scaled, dtype=torch.float32)
+        X_val_tensor = torch.tensor(X_val_scaled, dtype=torch.float32) 
+        
+        y_train_tensor = torch.tensor(
+            y_train.values,
+            dtype=torch.float32
+        ).reshape(-1, 1)
 
-predictor.build_future_roster_features()
+        y_val_tensor = torch.tensor(
+            y_val.values,
+            dtype=torch.float32
+        ).reshape(-1, 1)
+        
+        torch.manual_seed(seed)
+        
+        model = NeuralNetworks()
+
+        mae_criterion = nn.L1Loss() 
+        criterion = nn.MSELoss()
+        
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay = 0.001)
+        
+        best_val_mae = float("inf")
+        
+        patience = 250
+        epochs_without_improvement = 0
+        best_epoch = None
+                
+        num_epochs = 20000
+        for epoch in range(num_epochs):
+                optimizer.zero_grad()
+                prediction = model(X_train_tensor)
+                loss = criterion(prediction, y_train_tensor)
+                loss.backward()
+                optimizer.step()
+                                
+                if epoch % 10 == 0:
+                    model.eval()
+                    with torch.no_grad():
+                        train_prediction = model(X_train_tensor)
+                        train_loss = criterion(train_prediction, y_train_tensor)
+                        
+                        val_prediction = model(X_val_tensor)
+                        val_loss = criterion(val_prediction, y_val_tensor)
+                        
+                        train_mae = mae_criterion(train_prediction, y_train_tensor)
+                        val_mae = mae_criterion(val_prediction, y_val_tensor)
+            
+                    if val_mae.item() < best_val_mae:
+                        best_epoch = epoch
+                        best_val_mae = val_mae.item()
+                        epochs_without_improvement = 0
+                        best_model_state = copy.deepcopy(model.state_dict())
+                    else:
+                        epochs_without_improvement += 1
+                    
+                    if epochs_without_improvement >= patience:
+                        break
+                                            
+                    model.train()
+        
+        model.load_state_dict(best_model_state)
+        model.eval()
+        
+        with torch.no_grad():
+            val_prediction = model(X_val_tensor)
+        
+        results = val_data[["TEAM_NAME", self.Y]].copy()
+        results["PREDICTED_W_PCT"] = val_prediction.cpu().numpy().flatten()
+        results["ABS_ERROR"] = abs(
+            results["PREDICTED_W_PCT"] - results[self.Y]
+        )
+        results = results.sort_values("ABS_ERROR", ascending=False)
+        
+        print(results["ABS_ERROR"].mean())    
+        print("Stopped at:", epoch)
+        print("Best epoch:", best_epoch)
+        print("Best validation MAE:", best_val_mae)     
+
+    def train_test_seasons(self, seed):
+        back_season = 0
+        for input_season in range(2020, 2025):
+            back_season = (input_season + 1) % 100
+            print(f"{input_season}-{back_season} results: ")
+            self.train_test_split(input_season, seed)
+
+predictor = Predictor()
+
+seeds = [0, 1, 2, 3, 4, 42]
+
+
+for seed in seeds:
+    print(f"Seed: {seed}")
+    predictor.train_test_seasons(seed)
+    print()

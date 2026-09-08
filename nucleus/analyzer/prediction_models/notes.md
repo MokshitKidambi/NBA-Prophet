@@ -359,3 +359,381 @@
 
         Result: 
             Ridge was the best, with alpha = 7.0 being the best outcome.  
+
+# Notes from NeuralNetworks:
+
+Architecture:       13 → 10 → 5 → 1
+Activation:         ReLU
+Training loss:      MSE
+Evaluation metric:  MAE
+Optimizer:          Adam
+Learning rate:      0.001
+Seed:               42
+Validation check:   every 10 epochs
+Patience:           250 checks
+Best epoch:         11520
+Validation MAE:     0.025617
+
+13 → 10 → 5 → 1
+ReLU
+Adam
+lr = 0.001
+seed = 42
+patience = 250
+validation check every 10 epochs
+
+Take_All_Seasons:
+2020-21 results: 
+MAE: 0.08052195127596402
+Median Error: 5.89137557534713
+2021-22 results: 
+MAE: 0.07907930733393428
+Median Error: 6.210784295245812
+2022-23 results: 
+MAE: 0.07592100433905499
+Median Error: 5.485128764493641
+2023-24 results: 
+MAE: 0.08752697680876881
+Median Error: 6.7164197763440185
+2024-25 results: 
+MAE: 0.09823036481704839
+Median Error: 5.843690018854602
+
+Ridge rolling MAE: 0.08426
+NN V1 rolling MAE: 0.08209
+
+NN improvement: ~2.6%
+Season wins:
+Ridge 4
+NN    1
+
+TRYING DIFFERENT SEEDS
+
+Seed: 0
+2020-21 results: 
+0.08181256859302519
+Stopped at: 5090
+Best epoch: 2590
+Best validation MAE: 0.08181256800889969
+2021-22 results: 
+0.07119988539616268
+Stopped at: 4900
+Best epoch: 2400
+Best validation MAE: 0.07119987905025482
+2022-23 results: 
+0.07356907826264697
+Stopped at: 3250
+Best epoch: 750
+Best validation MAE: 0.07356907427310944
+2023-24 results: 
+0.08759906373023986
+Stopped at: 6340
+Best epoch: 3840
+Best validation MAE: 0.08759906142950058
+2024-25 results: 
+0.10407847572962442
+Stopped at: 3990
+Best epoch: 1490
+Best validation MAE: 0.10407847911119461
+
+Seed: 1
+2020-21 results: 
+0.0721259387731552
+Stopped at: 5390
+Best epoch: 2890
+Best validation MAE: 0.07212593406438828
+2021-22 results: 
+0.08057410128116607
+Stopped at: 3980
+Best epoch: 1480
+Best validation MAE: 0.08057410269975662
+2022-23 results: 
+0.08768372286955516
+Stopped at: 2940
+Best epoch: 440
+Best validation MAE: 0.08768371492624283
+2023-24 results: 
+0.08886409254868824
+Stopped at: 3130
+Best epoch: 630
+Best validation MAE: 0.08886408805847168
+2024-25 results: 
+0.10754608250459036
+Stopped at: 6420
+Best epoch: 3920
+Best validation MAE: 0.10754608362913132
+
+Seed: 2
+2020-21 results: 
+0.08343234664996464
+Stopped at: 6620
+Best epoch: 4120
+Best validation MAE: 0.08343233913183212
+2021-22 results: 
+0.07952481214205426
+Stopped at: 3400
+Best epoch: 900
+Best validation MAE: 0.07952480763196945
+2022-23 results: 
+0.08521865199406942
+Stopped at: 3960
+Best epoch: 1460
+Best validation MAE: 0.0852186530828476
+2023-24 results: 
+0.08701128338177998
+Stopped at: 4870
+Best epoch: 2370
+Best validation MAE: 0.08701129257678986
+2024-25 results: 
+0.09710776900450388
+Stopped at: 7780
+Best epoch: 5280
+Best validation MAE: 0.09710776805877686
+
+Seed: 3
+2020-21 results: 
+0.09271061159769695
+Stopped at: 3360
+Best epoch: 860
+Best validation MAE: 0.09271060675382614
+2021-22 results: 
+0.0720280742208163
+Stopped at: 5640
+Best epoch: 3140
+Best validation MAE: 0.07202806323766708
+2022-23 results: 
+0.07697072483698526
+Stopped at: 2960
+Best epoch: 460
+Best validation MAE: 0.07697071880102158
+2023-24 results: 
+0.08365074966748552
+Stopped at: 5700
+Best epoch: 3200
+Best validation MAE: 0.08365074545145035
+2024-25 results: 
+0.09454244488080343
+Stopped at: 8940
+Best epoch: 6440
+Best validation MAE: 0.09454243630170822
+
+Seed: 4
+2020-21 results: 
+0.07499305236339568
+Stopped at: 3500
+Best epoch: 1000
+Best validation MAE: 0.07499305158853531
+2021-22 results: 
+0.08713147766987485
+Stopped at: 3310
+Best epoch: 810
+Best validation MAE: 0.08713147044181824
+2022-23 results: 
+0.0781989204486211
+Stopped at: 2760
+Best epoch: 260
+Best validation MAE: 0.07819890975952148
+2023-24 results: 
+0.06560887047449747
+Stopped at: 3750
+Best epoch: 1250
+Best validation MAE: 0.06560887396335602
+2024-25 results: 
+0.10451859352588654
+Stopped at: 2990
+Best epoch: 490
+Best validation MAE: 0.1045185998082161
+
+Seed: 42
+2020-21 results: 
+0.08280379719734192
+Stopped at: 3480
+Best epoch: 980
+Best validation MAE: 0.08280380070209503
+2021-22 results: 
+0.08019077212015788
+Stopped at: 4710
+Best epoch: 2210
+Best validation MAE: 0.08019077032804489
+2022-23 results: 
+0.07870804886817931
+Stopped at: 3000
+Best epoch: 500
+Best validation MAE: 0.07870803773403168
+2023-24 results: 
+0.06832268094221751
+Stopped at: 5980
+Best epoch: 3480
+Best validation MAE: 0.06832268089056015
+2024-25 results: 
+0.10041986924012501
+Stopped at: 3620
+Best epoch: 1120
+Best validation MAE: 0.10041987150907516
+
+Thus, NNV1 and Ridge are close, the former is not greater than the latter yet. 
+
+WITH WEIGHT DECAY AT 0.0001:
+Seed: 0
+2020-21 results: 
+0.0832878345966339
+Stopped at: 4250
+Best epoch: 1750
+Best validation MAE: 0.08328782767057419
+2021-22 results: 
+0.07104045995076497
+Stopped at: 4760
+Best epoch: 2260
+Best validation MAE: 0.07104045897722244
+2022-23 results: 
+0.0712658813079198
+Stopped at: 3290
+Best epoch: 790
+Best validation MAE: 0.07126586884260178
+2023-24 results: 
+0.09124767136573791
+Stopped at: 4220
+Best epoch: 1720
+Best validation MAE: 0.09124767035245895
+2024-25 results: 
+0.10253304105599721
+Stopped at: 4280
+Best epoch: 1780
+Best validation MAE: 0.10253303498029709
+
+Seed: 1
+2020-21 results: 
+0.07756741876999534
+Stopped at: 5190
+Best epoch: 2690
+Best validation MAE: 0.07756742835044861
+2021-22 results: 
+0.0798925813039144
+Stopped at: 3850
+Best epoch: 1350
+Best validation MAE: 0.0798925831913948
+2022-23 results: 
+0.08526110400358837
+Stopped at: 2990
+Best epoch: 490
+Best validation MAE: 0.08526111394166946
+2023-24 results: 
+0.0892092647075653
+Stopped at: 3110
+Best epoch: 610
+Best validation MAE: 0.08920925110578537
+2024-25 results: 
+0.10180982178052264
+Stopped at: 7480
+Best epoch: 4980
+Best validation MAE: 0.10180982202291489
+
+Seed: 2
+2020-21 results: 
+0.08755422314008077
+Stopped at: 4010
+Best epoch: 1510
+Best validation MAE: 0.08755423128604889
+2021-22 results: 
+0.07890278204282127
+Stopped at: 3520
+Best epoch: 1020
+Best validation MAE: 0.07890278846025467
+2022-23 results: 
+0.08435347964763641
+Stopped at: 4090
+Best epoch: 1590
+Best validation MAE: 0.08435346931219101
+2023-24 results: 
+0.08515563581784565
+Stopped at: 5250
+Best epoch: 2750
+Best validation MAE: 0.08515563607215881
+2024-25 results: 
+0.0991693104426066
+Stopped at: 5890
+Best epoch: 3390
+Best validation MAE: 0.0991692990064621
+
+Seed: 3
+2020-21 results: 
+0.08948078452746071
+Stopped at: 3350
+Best epoch: 850
+Best validation MAE: 0.08948078751564026
+2021-22 results: 
+0.08058370796839398
+Stopped at: 3600
+Best epoch: 1100
+Best validation MAE: 0.08058371394872665
+2022-23 results: 
+0.07054644799232482
+Stopped at: 5940
+Best epoch: 3440
+Best validation MAE: 0.070546455681324
+2023-24 results: 
+0.08557791453202564
+Stopped at: 5260
+Best epoch: 2760
+Best validation MAE: 0.08557792007923126
+2024-25 results: 
+0.10107268160184225
+Stopped at: 3960
+Best epoch: 1460
+Best validation MAE: 0.10107266902923584
+
+Seed: 4
+2020-21 results: 
+0.07428195097446438
+Stopped at: 3570
+Best epoch: 1070
+Best validation MAE: 0.07428194582462311
+2021-22 results: 
+0.08673099604845046
+Stopped at: 3170
+Best epoch: 670
+Best validation MAE: 0.08673099428415298
+2022-23 results: 
+0.07776433404286703
+Stopped at: 2760
+Best epoch: 260
+Best validation MAE: 0.07776433974504471
+2023-24 results: 
+0.06818564478158949
+Stopped at: 5540
+Best epoch: 3040
+Best validation MAE: 0.06818564981222153
+2024-25 results: 
+0.1007406953136126
+Stopped at: 5640
+Best epoch: 3140
+Best validation MAE: 0.1007406935095787
+
+Seed: 42
+2020-21 results: 
+0.07994224495093026
+Stopped at: 4160
+Best epoch: 1660
+Best validation MAE: 0.0799422487616539
+2021-22 results: 
+0.07846675744056703
+Stopped at: 4620
+Best epoch: 2120
+Best validation MAE: 0.07846676558256149
+2022-23 results: 
+0.07872421975135802
+Stopped at: 3000
+Best epoch: 500
+Best validation MAE: 0.0787242203950882
+2023-24 results: 
+0.07111930468877156
+Stopped at: 6160
+Best epoch: 3660
+Best validation MAE: 0.07111930102109909
+2024-25 results: 
+0.10032831749916074
+Stopped at: 3600
+Best epoch: 1100
+Best validation MAE: 0.10032831132411957
+
+WEIGHT DECAY = 0.001
