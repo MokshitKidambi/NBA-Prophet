@@ -1483,7 +1483,9 @@ class Predictor:
 predictor = Predictor()
 _, hist_data = predictor.predict_season("2023-24")
 
+lrs = [0.0025, 0.005, 0.0075, 0.01]
 
-print(f"Learning Rate: 0.001")
-predictor.train_test_seasons(0.001)    
-print()
+for lr in lrs:
+    print(f"Learning Rate: {lr}")
+    predictor.train_test_seasons(lr)    
+    print()
