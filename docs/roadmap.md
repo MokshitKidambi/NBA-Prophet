@@ -28,9 +28,20 @@
         level of intensity such as Game 7s and elimination games.
 
 # Gear 3 
-    The goal in this gear is to establish all of the foundation for this project, not including the AI/ML stuff. It should be able to take in data, make sense of it, push it into analysis, and build a basic regular season predictor. 
+    The goal in this gear is to establish all of the foundation for this project using ML. It should be able to take in data, make sense of it, push it into analysis, and build a basic regular season predictor. 
 
 # Gear 4
-    Now this is about solidifying the predictor by adding more NBA details and the dynamic statistics to make the model even more
-    accurate and well-structured. 
+    Now this is about accounting for NBA players with no stats from the 2025-26 season, who could happen to be rookies, or international and injured players coming back in the 2026-27 after missing last year. The rookies will be addressed using NCAA, international, and G-League stats. All in all, this helps better solidify the predictor by adding more player stats that can drastically influence the standings. 
+
+# 1Q (Gear 5)
+    This consists of using Neural Networks to strengthen the predictions and then comparing them to the Ridge model to see which is better, and possibly aim for a combination of both results if the outcomes happen to be similar or there is no clear winner. After this, First-Quarter of NBA Prophet will be done.  
+
+# 2Q (Gear 6)
+    Next is the Second-Quarter 2Q(reaching the end of the First-Half), where roster updates need to be automatically updated instead of me running the file everytime and then finally adding the dynamic statistics such as level of coaching adjustments, chemistry, player growth, which I believe can be done with building AI models. After that is when the predictions on the websites will be updated accordingly. This will transition into the Third-Quarter 3Q, where it is more about alteration of the standings based on user input. 
+
+# 3Q (Gear 7)
+    (coming soon)
+
+# 4Q (Gear 8)
+    (coming soon)
 
