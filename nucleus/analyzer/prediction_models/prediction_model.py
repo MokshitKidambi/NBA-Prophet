@@ -2,7 +2,6 @@ from pathlib import Path
 import pandas
 import torch
 import torch.nn as nn
-import copy
 import numpy
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
@@ -30,8 +29,8 @@ class Predictor:
         self.team_experiment_features = ["NET_RATING", "TM_TOV_PCT", "DREB_PCT", "AST_RATIO", "PACE"]
         self.player_experiment_features = ["PPG", "TS_PCT","USG_PCT", "MPG", "TOTAL_MINS", "GP", "PLUS_MINUS"]
 
-        self.team_training_ground_path = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear4\\data\\features\\training_ground.csv")
-        self.player_feature_history = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear4\\data\\features\\player_feature_history.csv")
+        self.team_training_ground_path = Path(r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\gear5\data\features\training_ground.csv")
+        self.player_feature_history = Path(r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\gear5\data\features\player_feature_history.csv")
         self.season = "FEATURE_SEASON"
 
         self.median_historical_error = 6.392883589805631
@@ -570,24 +569,7 @@ class Predictor:
         X_train_scaled = scaler.fit_transform(X_train)
         X_test_scaled = scaler.transform(X_test)
         
-        #if model_type == "ridge":
         model = Ridge(alpha= 2.0)
-
-        #elif model_type == "elastic_net":
-            #model = ElasticNet(
-                #alpha= alpha,
-                #l1_ratio = l1_ratio,
-                #max_iter=10000
-            #)
-
-        #elif model_type == "gradient_boosting":
-            #model = GradientBoostingRegressor(
-                #random_state=42
-            #)
-
-        #else:
-            #raise ValueError(f"Unknown model type: {model_type}")
-
         model.fit(X_train_scaled, Y_train)
 
         if hasattr(model, "coef_"):
@@ -657,17 +639,23 @@ class Predictor:
         result["ACTUAL_WIN_82"] = result["ACTUAL_WIN_PCT"] * 82
         result["PREDICTED_WIN_82"] = result["PREDICTED_WIN_PCT"] * 82
          
-        result["ABSOLUTE_ERROR_82"] = abs(result["ACTUAL_WIN_82"] - result["PREDICTED_WIN_82"])
+        #result["ABSOLUTE_ERROR_82"] = abs(result["ACTUAL_WIN_82"] - result["PREDICTED_WIN_82"])
         result["PREDICTION_ERROR_82"] = (result["PREDICTED_WIN_82"] - result["ACTUAL_WIN_82"])
+
+        league_offset = (result["PREDICTED_WIN_PCT"].mean() - 0.500)
+
+        result["RIDGE_ADJUSTED_WIN_PCT"] = (result["PREDICTED_WIN_PCT"] - league_offset)
+
+        result["RIDGE_ADJUSTED_WINS"] = (result["RIDGE_ADJUSTED_WIN_PCT"] * 82)
          
         result = pandas.concat([test_info, result], axis = 1)
          
-        result = result.sort_values(by = "ABSOLUTE_ERROR_82", ascending = False)
+        result = result.sort_values(by = "RIDGE_ADJUSTED_WINS", ascending = False)
          
         test_info = test_info.reset_index(drop = True)
         result = result.reset_index(drop = True)
          
-        median_error = result["ABSOLUTE_ERROR_82"].median()
+        #median_error = result["ABSOLUTE_ERROR_82"].median()
                  
         #print(f"Median Error: {median_error}")
          
@@ -686,7 +674,7 @@ class Predictor:
 
             for season in self.test_seasons:
                 
-                print(f"{season} results: ")
+                #print(f"{season} results: ")
 
                 result, _ = self.predict_season(
                     season,
@@ -694,14 +682,9 @@ class Predictor:
                     rookie_weight = rookie_weight,
                 )
 
-                results.append({
-                    "TEST_SEASON": season,
-                    "MAE": result["ABSOLUTE_ERROR_82"].mean() / 82,
-                    "MEDIAN_ERROR_WINS":
-                        result["ABSOLUTE_ERROR_82"].median()
-                })
+                results.append(result)
 
-            return pandas.DataFrame(results)
+            return pandas.concat(results, ignore_index = True)
 
     def traded_player_check(self):
         player_feature_history = pandas.read_csv(self.player_feature_history)
@@ -731,7 +714,7 @@ class Predictor:
         final_scaler = StandardScaler()
         X_final_scaled = final_scaler.fit_transform(X_final_train)
 
-        final_model = Ridge(alpha=7.0)
+        final_model = Ridge(alpha=2.0)
         final_model.fit(X_final_scaled, Y_final_train)
 
         future_data, future_X = self.build_future_roster_features()
@@ -740,6 +723,14 @@ class Predictor:
 
         contributions = future_X_scaled * final_model.coef_
         contribution_wins = contributions * 82
+
+        future_data["COMBINED_ROSTER_CONTRIBUTION"] = (
+                contribution_wins[:, 5]
+                + contribution_wins[:, 7]
+                + contribution_wins[:, 8]
+                + contribution_wins[:, 9]
+                + contribution_wins[:, 10]
+        )
 
         for team_index in range(len(future_data)):
             team_name = future_data.iloc[team_index]["TEAM_NAME"]
@@ -821,8 +812,6 @@ class Predictor:
 
         future_data["RIDGE_ADJUSTED_WINS"] = (future_data["RIDGE_ADJUSTED_WIN_PCT"] * 82)
 
-        future_data = future_data.sort_values("RIDGE_ADJUSTED_WINS", ascending=False)
-
         future_data["OPTIMISTIC_WINS"] = (future_data["RIDGE_ADJUSTED_WINS"] + future_data["OPTIMISTIC_DELTA"])
         
         future_data["PESSIMISTIC_WINS"] = (future_data["RIDGE_ADJUSTED_WINS"] + future_data["PESSIMISTIC_DELTA"])
@@ -889,13 +878,11 @@ class Predictor:
         training_ground = pandas.read_csv(self.team_training_ground_path)
         player_feature_history = pandas.read_csv(self.player_feature_history)
 
-        PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
         future_roster_stats = pandas.read_csv(
-            r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\gear4\data\features\roster_stats_model_ready.csv"
+            r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\gear5\data\features\roster_stats_model_ready.csv"
         )
 
-        all_rosters = self._2027_roster().copy()
+        all_rosters = pandas.read_csv(r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\gear5\data\rosters\2026-27_rosters.csv")
 
         team_ids = [1610612737, 1610612738, 1610612751, 1610612766, 1610612741, 1610612739, 1610612742, 1610612743, 1610612765, 1610612744, 1610612745, 1610612746, 1610612747, 1610612763, 1610612748, 1610612749, 1610612750, 1610612752, 1610612753, 1610612754, 1610612755, 1610612756, 1610612757, 1610612758, 1610612759, 1610612760, 1610612761, 1610612762, 1610612764, 1610612740]
 
@@ -1134,8 +1121,6 @@ class Predictor:
             ]],
             on="TEAM_ID", how="left", validate="one_to_one"
         )
-        
-        
 
         future_data["INCOMING_STAT_COVERAGE"] = (
             future_data["INCOMING_WITH_STATS"] /
@@ -1279,11 +1264,7 @@ class Predictor:
         
         return future_roster
     
-    def train_test_split(self, target_season, seed, lr):
-        _, hist_data = self.predict_season("2023-24")
-        x = hist_data[self.X]
-                
-        y = hist_data[self.Y]
+    def train_test_split(self, hist_data, target_season, seed):
         
         hist_data["TARGET_YEAR"] = (
             hist_data["TARGET_SEASON"]
@@ -1325,14 +1306,8 @@ class Predictor:
         mae_criterion = nn.L1Loss() 
         criterion = nn.MSELoss()
         
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay = 0.001)
+        optimizer = torch.optim.Adam(model.parameters(), lr = 0.005, weight_decay = 0.001)
         
-        best_val_mae = float("inf")
-        
-        patience = 250
-        epochs_without_improvement = 0
-        best_epoch = None
-                
         num_epochs = 2500
         for epoch in range(num_epochs):
                 optimizer.zero_grad()
@@ -1340,33 +1315,7 @@ class Predictor:
                 loss = criterion(prediction, y_train_tensor)
                 loss.backward()
                 optimizer.step()
-                                
-                if epoch % 10 == 0:
-                    model.eval()
-                    with torch.no_grad():
-                        train_prediction = model(X_train_tensor)
-                        train_loss = criterion(train_prediction, y_train_tensor)
-                        
-                        val_prediction = model(X_val_tensor)
-                        val_loss = criterion(val_prediction, y_val_tensor)
-                        
-                        train_mae = mae_criterion(train_prediction, y_train_tensor)
-                        val_mae = mae_criterion(val_prediction, y_val_tensor)
-            
-                    if val_mae.item() < best_val_mae:
-                        best_epoch = epoch
-                        best_val_mae = val_mae.item()
-                        epochs_without_improvement = 0
-                        best_model_state = copy.deepcopy(model.state_dict())
-                    else:
-                        epochs_without_improvement += 1
-                    
-                    if epochs_without_improvement >= patience:
-                        break
-                                            
-                    model.train()
-        
-        model.load_state_dict(best_model_state)
+                                        
         model.eval()
         
         with torch.no_grad():
@@ -1378,23 +1327,50 @@ class Predictor:
             results["PREDICTED_W_PCT"] - results[self.Y]
         )
         results = results.sort_values("ABS_ERROR", ascending=False)
+        results["TARGET_SEASON"] = val_data["TARGET_SEASON"]
         
         print(results["ABS_ERROR"].mean())    
-        print("Best validation MAE:", best_val_mae)     
 
-    def train_test_seasons(self, lr):
+        return results
+
+    def train_test_seasons(self, hist_data):
+        win_collection = []
         seeds = [0, 1, 2, 3, 4, 42]
         back_season = 0
-        for seed in seeds:
-            print(f"Seed: {seed}")
-            print()
-            for input_season in range(2020, 2025):
-                back_season = (input_season + 1) % 100
+        for input_season in range(2020, 2025):
+            back_season = (input_season + 1) % 100
+            for seed in seeds:
                 print(f"{input_season}-{back_season} results: ")
-                self.train_test_split(input_season, seed, lr)
+                win_collection.append(self.train_test_split(hist_data, input_season, seed))
             print()
+        
+        win_collection = pandas.concat(win_collection, ignore_index = True)
 
-    def train_final_nn(self, hist_data, lr):
+        win_collection = win_collection.groupby(["TARGET_SEASON", "TEAM_NAME"]).agg({
+            "PREDICTED_W_PCT": "mean",
+            self.Y: "first"
+        }).reset_index()
+
+        season_mean = (
+            win_collection
+            .groupby("TARGET_SEASON")["PREDICTED_W_PCT"]
+            .transform("mean")
+        )
+
+        league_offset = season_mean - 0.500
+        win_collection["NN_ADJUSTED_WIN_PCT"] = win_collection["PREDICTED_W_PCT"] - league_offset
+
+        print(win_collection.shape)
+
+        print(
+            win_collection
+            .groupby("TARGET_SEASON")["NN_ADJUSTED_WIN_PCT"]
+            .mean()
+        )
+        
+        return win_collection
+
+    def train_final_nn(self, hist_data):
         final_train_mask = hist_data[self.Y].notna()
 
         X_final_train = hist_data.loc[final_train_mask, self.X]
@@ -1414,7 +1390,9 @@ class Predictor:
             dtype=torch.float32
         ).reshape(-1, 1)
         
-        future_data, future_X = self.build_future_roster_features()
+        _, future_X = self.build_future_roster_features()
+
+        future_data = self.train_final_model(hist_data)
         
         future_X_scaled = scaler.transform(future_X)
 
@@ -1431,7 +1409,7 @@ class Predictor:
 
             model = NeuralNetworks()
 
-            optimizer = torch.optim.Adam(model.parameters(), lr= lr, weight_decay = 0.001)
+            optimizer = torch.optim.Adam(model.parameters(), lr= 0.005, weight_decay = 0.001)
             criterion = nn.MSELoss()
     
             for epoch in range(2500):
@@ -1471,21 +1449,63 @@ class Predictor:
         future_data["NN_PREDICTED_WIN_PCT"] = new_seed_predictions
         future_data["NN_SEED_STD"] = seed_stds
         
-        league_offset = (future_data["NN_PREDICTED_WIN_PCT"].mean() - 0.500)
+        nn_league_offset = (future_data["NN_PREDICTED_WIN_PCT"].mean() - 0.500)
         
-        future_data["NN_ADJUSTED_WIN_PCT"] = (future_data["NN_PREDICTED_WIN_PCT"] - league_offset)
+        future_data["NN_ADJUSTED_WIN_PCT"] = (future_data["NN_PREDICTED_WIN_PCT"] - nn_league_offset)
         
         future_data["NN_ADJUSTED_WINS"] = (future_data["NN_ADJUSTED_WIN_PCT"] * 82)
         
-        print(future_data[["TEAM_NAME", "NN_ADJUSTED_WIN_PCT", "NN_ADJUSTED_WINS"]])
+        future_data["MODEL_GAP"] = future_data["NN_ADJUSTED_WINS"] - future_data["RIDGE_ADJUSTED_WINS"]
 
+        future_data["ABS_MODEL_GAP"] = abs(future_data["MODEL_GAP"])
 
+        future_data["RIDGE_DEVIATION"] = future_data["RIDGE_ADJUSTED_WINS"] - 41
+
+        future_data["NN_DEVIATION"] = future_data["NN_ADJUSTED_WINS"] - 41
+
+        future_corr = future_data[["RIDGE_DEVIATION", "NN_DEVIATION"]].corr()
+
+        #slope = (
+            #(future_data["RIDGE_DEVIATION"] * future_data["NN_DEVIATION"]).sum()
+            #/
+            #(future_data["RIDGE_DEVIATION"] ** 2).sum()
+        #)
+
+        future_data["ENSEMBLE_WIN_PCT"] = (
+            future_data["RIDGE_ADJUSTED_WIN_PCT"]
+            + future_data["NN_ADJUSTED_WIN_PCT"]
+        ) / 2
+
+        future_data["ENSEMBLE_WINS"] = (
+            future_data["ENSEMBLE_WIN_PCT"] * 82
+        )
+
+        future_data["FLOOR_WINS"] = numpy.floor(future_data["ENSEMBLE_WINS"]).astype(int)
+
+        future_data["WIN_REMAINDER"] = (
+            future_data["ENSEMBLE_WINS"]
+            - future_data["FLOOR_WINS"]
+        )
+
+        wins_needed = 1230 - future_data["FLOOR_WINS"].sum()
+        
+        top_remainders = future_data["WIN_REMAINDER"].nlargest(wins_needed).index
+
+        future_data["FINAL_WINS"] = future_data["FLOOR_WINS"]
+
+        future_data.loc[top_remainders, "FINAL_WINS"] += 1
+
+        future_data["FINAL_LOSSES"] = 82 - future_data["FINAL_WINS"]
+
+        future_data = future_data.sort_values(
+            ["FINAL_WINS", "ENSEMBLE_WINS"],
+            ascending=[False, False]
+        )
+
+        future_data.to_csv(r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\gear5\data\display\prediction_results.csv", index = False)
+        
 predictor = Predictor()
+
 _, hist_data = predictor.predict_season("2023-24")
 
-lrs = [0.0025, 0.005, 0.0075, 0.01]
-
-for lr in lrs:
-    print(f"Learning Rate: {lr}")
-    predictor.train_test_seasons(lr)    
-    print()
+predictor.train_final_nn(hist_data)

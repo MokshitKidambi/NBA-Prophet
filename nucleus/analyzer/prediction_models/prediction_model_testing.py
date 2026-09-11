@@ -1,3 +1,4 @@
+import pandas as pd
 from prediction_model import PredictorV4
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
@@ -154,6 +155,39 @@ def main():
         r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\gear4\data\display\nba_prophet_2026_27_predictions.csv",
         index=False
     )
+    
+    ridge_results = predictor.take_all_seasons()
+
+    nn_results = predictor.train_test_seasons(hist_data)
+
+    results = pd.merge(
+        ridge_results,
+        nn_results,
+        on=["TARGET_SEASON", "TEAM_NAME"],
+        validate="one_to_one"
+    )
+
+    results["ENSEMBLE_WIN_PCT"] = (results["RIDGE_ADJUSTED_WIN_PCT"] + results["NN_ADJUSTED_WIN_PCT"]) / 2
+
+    results["RIDGE_ABS_ERROR"] = abs(
+        results["RIDGE_ADJUSTED_WIN_PCT"] - results["ACTUAL_WIN_PCT"]
+    )
+
+    results["NN_ABS_ERROR"] = abs(
+        results["NN_ADJUSTED_WIN_PCT"] - results["ACTUAL_WIN_PCT"]
+    )
+
+    results["ENSEMBLE_ABS_ERROR"] = abs(
+        results["ENSEMBLE_WIN_PCT"] - results["ACTUAL_WIN_PCT"]
+    )
+
+    results["ENSEMBLE_ERROR_WINS"] = (
+        results["ENSEMBLE_ABS_ERROR"] * 82
+    )
+
+    season_results = results.groupby("TARGET_SEASON")[
+        ["RIDGE_ABS_ERROR", "NN_ABS_ERROR", "ENSEMBLE_ABS_ERROR"]
+    ].mean()
     
 if __name__ == "__main__":
     main()

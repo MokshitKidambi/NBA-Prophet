@@ -1,5 +1,8 @@
 import streamlit as st
 
+if st.button("← Back to Predictions"):
+    st.switch_page("app.py")
+
 st.set_page_config(
     page_title="How NBA Prophet Works",
     layout="wide"
@@ -270,6 +273,3 @@ These factors that are all very impactful on the success of an NBA team througho
 
 However, as the model is still in its early stages, it will continued to be improved with the means of surpassing said limitations in the future.
 """)
-
-if st.button("← Back to Predictions"):
-    st.switch_page("app.py")

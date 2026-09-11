@@ -6,19 +6,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 player_feature_history = pd.read_csv(BASE_DIR / "data" / "features" / "player_feature_history.csv")
-predictions = pd.read_csv(BASE_DIR / "data" / "display" / "nba_prophet_2026_27_predictions.csv")
+predictions = pd.read_csv(BASE_DIR / "data" / "display" / "prediction_results.csv")
 roster_changes = pd.read_csv(BASE_DIR / "data" / "rosters" / "2025-26_to_2026-27_roster_changes.csv")
 old_roster = pd.read_csv(BASE_DIR / "data" / "rosters" / "2025-26_roster.csv")
 future_roster = pd.read_csv(BASE_DIR / "data" / "rosters" / "2026-27_rosters.csv")
 injuries = pd.read_csv(BASE_DIR / "data" / "rosters" / "injuries.csv")
-
-predictions["DISPLAY_WINS"] = (
-    predictions["ADJUSTED_WINS"].round().astype(int)
-)
-
-predictions["DISPLAY_LOSSES"] = (
-    82 - predictions["DISPLAY_WINS"]
-)
 
 st.markdown("""
 <style>
@@ -83,7 +75,7 @@ with top_left:
     st.title(team["TEAM_NAME"])
 
     team["PROJECTED_RECORD"] = (
-        f"{team['DISPLAY_WINS']} - {team['DISPLAY_LOSSES']}"
+        f"{team['FINAL_WINS']} - {team['FINAL_LOSSES']}"
     )
 
     st.subheader(
@@ -91,44 +83,52 @@ with top_left:
     )
     
     st.write(
-        f"• Projected Win Percentage: "
-        f"{team['ADJUSTED_WIN_PCT'] * 100:.1f}%"
+        f"Projected Win Percentage: {team['ENSEMBLE_WIN_PCT'] * 100:.1f}%"
     )
 
-    st.write(
-        f"• 80% Historical Error Band: "
-        f"{team['LOW_80']:.1f} – {team['HIGH_80']:.1f} wins"
-    )
+    st.write(f"• Roster Confidence: {team["ROSTER_CONFIDENCE"]}")
+    
+    st.write(f"• Roster Sensitivity: {team["ROSTER_SENSITIVITY"]}")
     
 with top_right:
 
-    st.header("Prediction Range")
+    positive_col, negative_col = st.columns(2)
+    
+    with positive_col:
+        for pos_contributor in range(1, 4):
+            pos_feature = team[
+                f"TOP_POSITIVE_CONTRIBUTOR_{pos_contributor}"
+            ]
+            
+            pos_wins = team[
+                f"TOP_POSITIVE_CONTRIBUTOR_{pos_contributor}_WINS"
+            ]
+            
+            st.write(
+                f"▲ {pos_feature}"
+            )
 
-    st.metric(
-        "Projected Wins",
-        f"{team['ADJUSTED_WINS']:.1f}"
-    )
-
-    st.write(
-        f"**80% Historical Error Band:** "
-        f"{team['LOW_80']:.1f} – {team['HIGH_80']:.1f}"
-    )
-
-    st.write(
-        f"**90% Historical Error Band:** "
-        f"{team['LOW_90']:.1f} – {team['HIGH_90']:.1f}"
-    )
-
-    st.write(
-        f"**95% Historical Error Band:** "
-        f"{team['LOW_95']:.1f} – {team['HIGH_95']:.1f}"
-    )
-
-    st.caption(
-        "These ranges are based on NBA Prophet's historical "
-        "walk-forward prediction errors and are not formal "
-        "statistical confidence intervals."
-    )
+            st.caption(
+                f"+{pos_wins:.2f} wins"
+            )
+            
+    with negative_col:
+        for neg_contributor in range(1, 4):
+            neg_feature = team[
+                f"TOP_POSITIVE_CONTRIBUTOR_{neg_contributor}"
+            ]
+                
+            neg_wins = team[
+                f"TOP_POSITIVE_CONTRIBUTOR_{neg_contributor}_WINS"
+            ]
+                
+            st.write(
+                f"▲ {neg_feature}"
+            )
+    
+            st.caption(
+                f"+{neg_wins:.2f} wins"
+            )  
 
 for column in ["RETURNING", "OUTGOING", "INCOMING"]:
     roster_changes[column] = roster_changes[column].apply(ast.literal_eval)

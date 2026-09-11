@@ -149,7 +149,8 @@ def display_conference(conference, conference_name):
         1.8,
         0.7,
         0.7,
-        1.2
+        0.7,
+        0.7
     ]
 
     header = st.columns(column_widths)
@@ -159,7 +160,8 @@ def display_conference(conference, conference_name):
     header[2].markdown("**Team**")
     header[3].markdown("**Projected Wins**")
     header[4].markdown("**Projected Losses**")
-    header[5].markdown("**80% Error Band**")
+    header[5].markdown("**Roster Confidence**")
+    header[6].markdown("**Roster Sensitivity**")
 
     for _, team in conference.iterrows():
 
@@ -169,7 +171,8 @@ def display_conference(conference, conference_name):
             team_col,
             wins_col,
             losses_col,
-            band_col
+            roster_conf_col,
+            roster_sens_col
         ) = st.columns(column_widths)
 
         seed_col.write(int(team["SEED"]))
@@ -195,34 +198,27 @@ def display_conference(conference, conference_name):
                 )
 
         wins_col.write(
-            int(team["DISPLAY_WINS"])
+            int(team["FINAL_WINS"])
         )
 
         losses_col.write(
-            int(team["DISPLAY_LOSSES"])
+            int(team["FINAL_LOSSES"])
         )
 
-        band_col.write(
-            f"{team['LOW_80']:.1f} – "
-            f"{team['HIGH_80']:.1f}"
-        )
+        roster_conf_col.write(team["ROSTER_CONFIDENCE"])
+        
+        roster_sens_col.write(team["ROSTER_SENSITIVITY"])
+        
+        
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-predictions = pd.read_csv(
-    BASE_DIR / "data" / "display" / "nba_prophet_2026_27_predictions.csv"
-)
+#predictions = pd.read_csv(BASE_DIR / "data" / "display" / "nba_prophet_2026_27_predictions.csv")
 
-predictions["DISPLAY_WINS"] = (
-    predictions["ADJUSTED_WINS"].round().astype(int)
-)
-
-predictions["DISPLAY_LOSSES"] = (
-    82 - predictions["DISPLAY_WINS"]
-)
+predictions = pd.read_csv(BASE_DIR / "data" / "display" / "prediction_results.csv")
 
 predictions = predictions.sort_values(
-    "ADJUSTED_WINS",
+    "FINAL_WINS",
     ascending=False
 ).reset_index(drop=True)
 
@@ -235,14 +231,14 @@ predictions["CONFERENCE"] = predictions["TEAM_NAME"].map(
 east = predictions[
     predictions["CONFERENCE"] == "East"
 ].sort_values(
-    "ADJUSTED_WINS",
+    "FINAL_WINS",
     ascending=False
 ).reset_index(drop=True)
 
 west = predictions[
     predictions["CONFERENCE"] == "West"
 ].sort_values(
-    "ADJUSTED_WINS",
+    "FINAL_WINS",
     ascending=False
 ).reset_index(drop=True)
 
