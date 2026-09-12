@@ -2,12 +2,12 @@ import pandas as pd
 import os
 import requests
 from pathlib import Path
-from nba_api.stats.endpoints import drafthistory, commonallplayers
+from nba_api.stats.endpoints import drafthistory, playerindex, commonplayerinfo
 
 class MissingStats:
     def __init__(self):
         self.player_feature_history_path = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear3\\data\\features\\player_feature_history.csv")
-        self.future_roster_path = Path("C:\\Users\\kidam\\OneDrive\\Documents\\pythonstuff\\NBA-Prophet\\gear4\\data\\rosters\\2026-27_rosters.csv")
+        self.future_roster_path = Path(r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\Q2\data\rosters\current_roster.csv")
         self.roster_stats = pd.DataFrame()
         self.ncaa_translation_path = Path("ncaa_translation_sample.csv")
         
@@ -29,42 +29,69 @@ class MissingStats:
         self.USG_PCT_X = ["PRE_NBA_USG_PCT"]
         self.USG_PCT_Y = ["FIRST_VALUABLE_NBA_USG_PCT"]
         
-    def test(self):
-        future_roster = pd.read_csv(self.future_roster_path)
-        
-        players = commonallplayers.CommonAllPlayers(
-            is_only_current_season=1,
-            league_id="00",
-            season="2026-27"
-        ).get_data_frames()[0]
-
-        future_roster = players[
-            players["TEAM_ID"] != 0
-        ][
-            ["TEAM_ID", "PERSON_ID", "DISPLAY_FIRST_LAST", "ROSTERSTATUS"]
-        ].copy()
-
-        future_roster.rename(
-            columns={
-                "PERSON_ID": "PLAYER_ID",
-                "DISPLAY_FIRST_LAST": "PLAYER_NAME"
-            },
-            inplace=True
-        )
-
-        future_roster["SEASON"] = "2026-27"
-
-        future_roster.to_csv(self.future_roster_path, index=False)
-
+        self.g_league_teams = {
+            "Austin Spurs",
+            "Capital City Go-Go",
+            "Cleveland Charge",
+            "Coachella Valley Lakers",
+            "College Park Skyhawks",
+            "Delaware Blue Coats",
+            "Grand Rapids Gold",
+            "Greensboro Swarm",
+            "Iowa Wolves",
+            "Laketown Squadron",
+            "Long Island Nets",
+            "Maine Celtics",
+            "Memphis Hustle",
+            "Mexico City Capitanes",
+            "Motor City Cruise",
+            "Noblesville Boom",
+            "Oklahoma City Blue",
+            "Osceola Magic",
+            "Raptors 905",
+            "Rio Grande Valley Vipers",
+            "Rip City Remix",
+            "Salt Lake City Stars",
+            "San Diego Clippers",
+            "Santa Cruz Warriors",
+            "Sioux Falls Skyforce",
+            "Stockton Kings",
+            "Texas Legends",
+            "Valley Suns",
+            "Westchester Knicks",
+            "Windy City Bulls",
+            "Wisconsin Herd"
+        }
                 
     def stats_tracker(self):
-                
-        rookie_stats = pd.read_csv("rookies.csv")       
+        ncaa_stat_list = pd.read_csv(r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\Q2\data\rookie_data\ncaa\ncaa_stat_list.csv")
+
+        players = playerindex.PlayerIndex(season = "2026-27").get_data_frames()[0]
+
+        players.rename(columns = {
+            "PERSON_ID": "PLAYER_ID",
+            "ROSTER_STATUS": "ROSTERSTATUS"
+            }, inplace = True
+        )
+
+        players["PLAYER_NAME"] = players["PLAYER_FIRST_NAME"] + " " + players["PLAYER_LAST_NAME"]
+
+        players["SEASON"] = "2026-27"
+
+        for index, row in players.iterrows():
+            if row["PLAYER_NAME"] == "Tucker DeVries" or row["PLAYER_NAME"] == "Alpha Diallo" or row["PLAYER_NAME"] == "Bryce Hopkins":
+                players.loc[index, "POSITION"] = "F"
+            elif row["PLAYER_NAME"] == "Josh Dix" or row["PLAYER_NAME"] == "J'Vonne Hadley" or row["PLAYER_NAME"] == "Jaylin Sellers":
+                players.loc[index, "POSITION"] = "G"
+            else:
+                continue
+            
+        rookie_stats = pd.read_csv(r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\Q2\data\rookie_data\rookies.csv")       
         player_feature_history = pd.read_csv(self.player_feature_history_path)
-        player_stats = pd.read_csv("rookies_translated.csv")
+        player_stats = pd.read_csv(r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\Q2\data\rookie_data\rookies_translated.csv")
         
         future_roster = pd.read_csv(self.future_roster_path)
-        
+                
         current_stats = player_feature_history[player_feature_history["SEASON"] == "2025-26"]
         
         current_stats = current_stats.rename(columns={"TEAM_ID": "STAT_TEAM_ID", "PLAYER_NAME": "STAT_PLAYER_NAME"})
@@ -72,6 +99,8 @@ class MissingStats:
         roster_stats = future_roster.merge(current_stats, on = "PLAYER_ID", how = "left")
         
         missing_stats = []
+        
+        no_rookie_row = []
         
         no_player_history = []   
                 
@@ -83,7 +112,12 @@ class MissingStats:
                     no_player_history.append(row)
                     roster_stats.loc[index, "STATUS"] = "NO_HISTORY"
                     if rookie_row.empty:
-                        print("ROOKIE NOT FOUND:", row["PLAYER_NAME_x"])
+                        print("ROOKIE NOT FOUND:", row["PLAYER_NAME"])
+                        
+                        unresolved_row = row.copy()
+                        unresolved_row["STATUS"] = "UNRESOLVED"
+                        
+                        no_rookie_row.append(unresolved_row)
                         continue
                     
                     rookie_row = rookie_row.iloc[0]
@@ -144,6 +178,67 @@ class MissingStats:
                 total_missing_stats.loc[other_index, "STATUS"] = "STALE"
                 total_missing_stats.loc[other_index, "USE_FALLBACK"] = False
         
+        no_rookie_row = pd.DataFrame(no_rookie_row)
+        no_rookie_row = no_rookie_row[
+            [
+                "TEAM_ID",
+                "PLAYER_ID",
+                "PLAYER_NAME",
+                "POSITION",
+                "STATUS"
+            ]
+        ]
+        
+        players_raw = players.copy()
+        
+        no_rookie_row = no_rookie_row.merge(players_raw, on = "PLAYER_ID", how = "left")
+        
+        for no_index, no_row in no_rookie_row.iterrows():
+            found_ncaa = False
+            for ncaa_index, ncaa_row in ncaa_stat_list.iterrows():
+                if no_row["COLLEGE"] == ncaa_row["team"]:
+                    no_rookie_row.loc[no_index, "ROOKIE_SOURCE"] = "NCAA"
+                    found_ncaa = True
+                    break
+                else:
+                    continue
+            
+            if found_ncaa:
+                continue
+            
+            info = commonplayerinfo.CommonPlayerInfo(
+                player_id=int(no_row["PLAYER_ID"])
+            ).get_data_frames()[0]
+
+            affiliation = info.iloc[0]["LAST_AFFILIATION"]
+
+            affiliation_country = affiliation.split("/")[-1]
+            
+            if affiliation_country != "USA":
+                no_rookie_row.loc[no_index, "ROOKIE_SOURCE"] = "INTERNATIONAL"
+                
+            elif no_row["COLLEGE"] in self.g_league_teams:
+                no_rookie_row.loc[no_index, "ROOKIE_SOURCE"] = "G-LEAGUE"  
+                   
+            else:
+                no_rookie_row.loc[no_index, "ROOKIE_SOURCE"] = "UNRESOLVED"  
+                
+        no_rookie_row = no_rookie_row[
+            [
+                "TEAM_ID_x",
+                "PLAYER_ID",
+                "PLAYER_NAME_x",
+                "POSITION_x",
+                "ROOKIE_SOURCE"
+            ]
+        ].rename(
+            columns={
+                "TEAM_ID_x": "TEAM_ID",
+                "PLAYER_NAME_x": "PLAYER_NAME",
+                "POSITION_x": "POSITION"
+            }
+        )
+                
         roster_stats["RPG"] = roster_stats["RPG"].fillna(
             roster_stats["REB"] / roster_stats["GP"]
         )
@@ -199,9 +294,9 @@ class MissingStats:
                 roster_stats[f"MODEL_{stat}"]
                 .fillna(roster_stats[stat])
             )
-        
-        roster_stats.to_csv("roster_stats_model_ready.csv", index = False)
-                    
+
+        return no_rookie_row
+                            
     def track_first_valuable_NBA_season_data(self):
         roster_stats = self.roster_stats
         player_feature_history = pd.read_csv(self.player_feature_history_path)
@@ -412,7 +507,7 @@ class MissingStats:
         
         college_stat_list = []
         
-        for year in range(2017, 2025):
+        for year in range(2017, 2027):
             for attempt in range(3):
                 try:
                     response = requests.get(url, headers = headers, params = {"season": year}, timeout=60)
@@ -485,13 +580,14 @@ class MissingStats:
         ncaa_stat_list.to_csv("ncaa_stat_list.csv", index = False)
         
     def track_preNBA_stats(self):
-        ncaa_transitions = pd.read_csv("ncaa_transitions.csv")
-        ncaa_stat_list = pd.read_csv("ncaa_stat_list.csv")
+        ncaa_transitions = pd.read_csv(r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\Q2\data\rookie_data\ncaa\ncaa_transitions.csv")
+        ncaa_stat_list = pd.read_csv(r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\Q2\data\rookie_data\ncaa\ncaa_stat_list.csv")
         
         name_aliases = {"Omari Spellman": "Omari Rasulala Spellman"}
         ncaa_transitions["PRE_NBA_SEASON"] = ncaa_transitions["DRAFT_YEAR"]
         ncaa_transitions.loc[ncaa_transitions["PLAYER_NAME"] == "De'Anthony Melton", "PRE_NBA_SEASON"] = 2017
         ncaa_transitions["CBBD_NAME"] = (ncaa_transitions["PLAYER_NAME"].replace(name_aliases))
+        
         matched = ncaa_transitions.merge(ncaa_stat_list, left_on=["CBBD_NAME", "PRE_NBA_SEASON"], right_on = ["name", "season"], how = "left")
                 
         matched["PRE_NBA_GP"] = matched["games"]
@@ -549,52 +645,57 @@ class MissingStats:
             ]
         ].copy()
         
-        matched.to_csv("ncaa_translation_sample.csv", index = False)
+        no_rookie_row = self.stats_tracker()
+        
+        no_rookie_row = no_rookie_row.merge(
+            matched,
+            on="PLAYER_ID",
+            how="left",
+            suffixes=("", "_MATCHED")
+        )
+        
+        print(
+            matched[
+                [
+                    "PLAYER_NAME",
+                    "ROOKIE_SOURCE",
+                    "PRE_NBA_GP",
+                    "PRE_NBA_MPG",
+                    "PRE_NBA_PPG",
+                    "PRE_NBA_RPG",
+                    "PRE_NBA_APG",
+                    "PRE_NBA_TS_PCT",
+                    "PRE_NBA_USG_PCT"
+                ]
+            ].to_string(index=False)
+        )
+        
+        #matched.to_csv("ncaa_translation_sample.csv", index = False)
         
     def add_new_players(self):
-        new_players = pd.DataFrame([
-            {
-                "PLAYER_ID": 1641935,
-                "PLAYER_NAME": "Jarkel Joiner",
-                "ROOKIE_SOURCE": "G-LEAGUE",
-                "GP": 50,
-                "MPG": 23.6,
-                "PPG": 10.9,
-                "RPG": 2.3,
-                "APG": 3.8,
-                "TS_PCT": 0.562,
-                "USG_PCT": 0.200,
-                "HAS_IMPUTED_STATS": False
-            },
-            {
-                "PLAYER_ID": 1631215,
-                "PLAYER_NAME": "Khalifa Diop",
-                "ROOKIE_SOURCE": "INTERNATIONAL",
-                "GP": 47,
-                "MPG": 16.4,
-                "PPG": 3.8,
-                "RPG": 4.2,
-                "APG": 0.7,
-                "TS_PCT": 0.683,
-                "USG_PCT": 0.106,
-                "HAS_IMPUTED_STATS": False
-            }
-        ])
+        ncaa_stat_list = pd.read_csv(r"C:\Users\kidam\OneDrive\Documents\pythonstuff\NBA-Prophet\Q2\data\rookie_data\ncaa\ncaa_stat_list.csv")
+        no_rookie_row = self.stats_tracker()
         
-        rookies = pd.read_csv("rookies.csv")
-
-        new_players = new_players[
-            ~new_players["PLAYER_ID"].isin(rookies["PLAYER_ID"])
-        ]
-
-        rookies = pd.concat(
-            [rookies, new_players],
-            ignore_index=True
+        ncaa_new = no_rookie_row[
+            no_rookie_row["ROOKIE_SOURCE"] == "NCAA"
+        ].copy()
+        
+        ncaa_new = ncaa_new.merge(
+            ncaa_stat_list,
+            left_on="PLAYER_NAME",
+            right_on="name",
+            how="left"
         )
-
-        rookies.to_csv("rookies.csv", index=False)
-                
+        
+        ncaa_new["PRE_NBA_GP"] = ncaa_new["games"]
+        ncaa_new["PRE_NBA_MPG"] = ncaa_new["minutes"] / ncaa_new["games"]
+        ncaa_new["PRE_NBA_PPG"] = ncaa_new["points"] / ncaa_new["games"]
+        ncaa_new["PRE_NBA_RPG"] = ncaa_new["rebounds.total"] / ncaa_new["games"]
+        ncaa_new["PRE_NBA_APG"] = ncaa_new["assists"] / ncaa_new["games"]
+        ncaa_new["PRE_NBA_TS_PCT"] = ncaa_new["trueShootingPct"]
+        ncaa_new["PRE_NBA_USG_PCT"] = ncaa_new["usage"] / 100
+                        
 missing_stats = MissingStats()
 
-missing_stats.stats_tracker()
+missing_stats.collect_preNBA_stats()
             
